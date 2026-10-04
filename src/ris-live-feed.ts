@@ -7,6 +7,7 @@
 import type { MonitoredPrefix, Observation } from './monitor.ts';
 import { parseRisLiveMessage } from './parsers/ris-live.ts';
 
+/** `connecting` only until the first attempt ends; any failed or dropped connection means `reconnecting`. */
 export type FeedStatus = 'connecting' | 'connected' | 'reconnecting';
 export type FeedState = { readonly status: FeedStatus; readonly observations: number };
 export type FeedChange =
@@ -108,7 +109,7 @@ export const startRisLiveFeed = (options: {
     socket = undefined;
     clearInterval(watchdog);
     if (stopped) return;
-    if (status === 'connected') setStatus('reconnecting');
+    setStatus('reconnecting');
     retry = setTimeout(connect, backoffMs);
     backoffMs = Math.min(backoffMs * 2, timing.maxBackoffMs);
   };

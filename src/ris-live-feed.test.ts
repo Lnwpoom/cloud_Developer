@@ -185,7 +185,7 @@ describe('RIS Live feed', () => {
     assert.deepEqual(statuses, ['connected']);
   });
 
-  it('reports connecting, not reconnecting, until the first connection succeeds', async () => {
+  it('reports reconnecting once the first connection attempt fails at startup, then connected once RIS Live is up', async () => {
     const standIn = await startStandIn();
     const { port } = standIn;
     await standIn.stop();
@@ -202,13 +202,15 @@ describe('RIS Live feed', () => {
     feed.onChange((change) => {
       if (change.type === 'feed-status') statuses.push(change.status);
     });
-    await new Promise((resolve) => setTimeout(resolve, 200));
     assert.equal(feed.state().status, 'connecting');
+    await waitFor('reconnecting', () => feed.state().status === 'reconnecting');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.equal(feed.state().status, 'reconnecting');
 
     const restarted = await startStandIn(port);
     cleanups.push(restarted.stop);
     await waitFor('connected', () => feed.state().status === 'connected');
 
-    assert.deepEqual(statuses, ['connected']);
+    assert.deepEqual(statuses, ['reconnecting', 'connected']);
   });
 });
