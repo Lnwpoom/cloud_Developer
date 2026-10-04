@@ -2,6 +2,7 @@
  * RPKI facts the Monitor attaches to its output: the RFC 6811 validation
  * state of an announcement, and Loose ROA advisories.
  */
+import { formatAsn } from './domain.ts';
 import type { MonitoredPrefix, Origin } from './domain.ts';
 import { containsPrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
@@ -61,7 +62,7 @@ export const looseRoaAdvisories = (
     for (const vrp of vrps) {
       if (!containsPrefix(vrp.prefix, prefix) || vrp.maxLength <= prefix.length) continue;
       const roa = { prefix: vrp.prefix.text, maxLength: vrp.maxLength, asn: vrp.asn };
-      const id = ['loose-roa', prefix.text, `${roa.prefix}-${String(roa.maxLength)}`, `AS${String(roa.asn)}`].join('|');
+      const id = ['loose-roa', prefix.text, `${roa.prefix}-${String(roa.maxLength)}`, formatAsn(roa.asn)].join('|');
       advisories.set(id, { id, kind: 'loose-roa', monitoredPrefix: prefix.text, roa });
     }
   }

@@ -4,6 +4,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { readConfig } from './config.ts';
+import { formatAsn } from './domain.ts';
 import { createMonitor } from './monitor.ts';
 import { loadMonitorConfigFile } from './monitor-config-file.ts';
 import { createWebServer, listen } from './server.ts';
@@ -71,7 +72,7 @@ const main = async (): Promise<void> => {
     throw error;
   }
   const watched = monitoredPrefixes
-    .map((monitored) => `${monitored.prefix.text} (AS${String(monitored.declaredOrigin)})`)
+    .map((monitored) => `${monitored.prefix.text} (${formatAsn(monitored.declaredOrigin)})`)
     .join(', ');
   console.log(`BGP Hijack Monitor watching ${watched} on ${config.risLiveUrl}`);
   console.log(`Open http://localhost:${String(config.port)}/`);

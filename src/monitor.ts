@@ -2,6 +2,7 @@
  * The Monitor: the detection core. It turns observed announcements into
  * alerts. No I/O; feed it observations and read or subscribe to its alerts.
  */
+import { formatAsn } from './domain.ts';
 import type { AsPath, MonitoredPrefix, Observation, Origin, Source } from './domain.ts';
 import { createListeners } from './listeners.ts';
 import { containsPrefix, samePrefix } from './prefix.ts';
@@ -55,7 +56,7 @@ const originOf = (path: AsPath): Origin => {
 };
 
 const originText = (origin: Origin): string =>
-  origin === 'NONE' ? 'NONE' : `AS${String(origin.asn)}`;
+  origin === 'NONE' ? 'NONE' : formatAsn(origin.asn);
 
 const snapshot = (record: AlertRecord): Alert => ({ ...record.alert, peerCount: record.peers.size });
 

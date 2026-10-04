@@ -1,6 +1,7 @@
 /**
  * Domain types shared by the Monitor, the RPKI checks, the parsers, the
- * live feed and the simulator (terms as in GLOSSARY.md).
+ * live feed and the simulator (terms as in GLOSSARY.md), and the AS number
+ * text form.
  */
 import type { Prefix } from './prefix.ts';
 
@@ -27,3 +28,6 @@ export type Observation = {
 
 /** The origin AS, or NONE when the AS path ends in an AS_SET. */
 export type Origin = { readonly asn: number } | 'NONE';
+
+/** An AS number as text, e.g. `AS64500`. */
+export const formatAsn = (asn: number): string => `AS${String(asn)}`;
