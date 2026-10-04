@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import { createMonitor } from './monitor.ts';
-import type { MonitoredPrefix } from './monitor.ts';
+import type { MonitoredPrefix } from './domain.ts';
 import { parsePrefix } from './prefix.ts';
 import { createSimulator } from './simulation.ts';
 import { createWebServer, listen, ListenError } from './server.ts';

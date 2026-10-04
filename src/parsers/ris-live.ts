@@ -7,7 +7,7 @@
  * costs the valid observations beside it; an UPDATE with announcements but
  * no valid prefix at all is a problem.
  */
-import type { AsPath, AsPathSegment, Observation } from '../monitor.ts';
+import type { AsPath, AsPathSegment, Observation } from '../domain.ts';
 import { parsePrefix } from '../prefix.ts';
 
 export type RisLiveParseResult =

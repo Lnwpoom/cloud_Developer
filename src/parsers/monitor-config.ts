@@ -4,7 +4,7 @@
  * Expected shape:
  *   { "monitoredPrefixes": [ { "prefix": "203.0.113.0/24", "declaredOrigin": 64500 } ] }
  */
-import type { MonitoredPrefix } from '../monitor.ts';
+import type { MonitoredPrefix } from '../domain.ts';
 import { parsePrefix } from '../prefix.ts';
 
 export type MonitorConfigParseResult =

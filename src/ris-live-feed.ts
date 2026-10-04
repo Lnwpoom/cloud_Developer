@@ -4,7 +4,7 @@
  * more-specifics, passes every parsed observation on, counts them, and
  * reconnects with backoff when the connection drops or goes silent.
  */
-import type { MonitoredPrefix, Observation } from './monitor.ts';
+import type { MonitoredPrefix, Observation } from './domain.ts';
 import { parseRisLiveMessage } from './parsers/ris-live.ts';
 
 /** `connecting` only until the first attempt ends; any failed or dropped connection means `reconnecting`. */

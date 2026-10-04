@@ -1,0 +1,29 @@
+/**
+ * Domain types shared by the Monitor, the RPKI checks, the parsers, the
+ * live feed and the simulator (terms as in GLOSSARY.md).
+ */
+import type { Prefix } from './prefix.ts';
+
+/** A prefix the operator wants watched, with the AS that should originate it. */
+export type MonitoredPrefix = {
+  readonly prefix: Prefix;
+  readonly declaredOrigin: number;
+};
+
+/** One AS path element: an AS number, or an AS_SET of AS numbers. */
+export type AsPathSegment = number | readonly number[];
+export type AsPath = readonly AsPathSegment[];
+
+export type Source = 'live' | 'simulated';
+
+/** One announcement of one prefix, as seen from one peer. */
+export type Observation = {
+  readonly announcedPrefix: Prefix;
+  readonly asPath: AsPath;
+  readonly peer: string;
+  readonly source: Source;
+  readonly seenAt: Date;
+};
+
+/** The origin AS, or NONE when the AS path ends in an AS_SET. */
+export type Origin = { readonly asn: number } | 'NONE';

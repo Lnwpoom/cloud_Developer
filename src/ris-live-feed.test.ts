@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { WebSocketServer } from 'ws';
 import type { RawData, WebSocket } from 'ws';
-import type { MonitoredPrefix, Observation } from './monitor.ts';
+import type { MonitoredPrefix, Observation } from './domain.ts';
 import { parsePrefix } from './prefix.ts';
 import { startRisLiveFeed } from './ris-live-feed.ts';
 import type { FeedStatus, RisLiveFeed } from './ris-live-feed.ts';

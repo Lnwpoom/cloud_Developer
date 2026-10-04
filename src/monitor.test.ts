@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMonitor } from './monitor.ts';
-import type { MonitorChange, Observation, Source } from './monitor.ts';
+import type { Observation, Source } from './domain.ts';
+import type { MonitorChange } from './monitor.ts';
 import { parsePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 

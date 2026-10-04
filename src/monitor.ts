@@ -2,35 +2,13 @@
  * The Monitor: the detection core. It turns observed announcements into
  * alerts. No I/O; feed it observations and read or subscribe to its alerts.
  */
+import type { AsPath, MonitoredPrefix, Observation, Origin, Source } from './domain.ts';
 import { containsPrefix, samePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 import { looseRoaAdvisories, relevantVrps, validationState } from './rpki.ts';
 import type { Advisory, ValidationState, Vrp } from './rpki.ts';
 
-export type MonitoredPrefix = {
-  readonly prefix: Prefix;
-  readonly declaredOrigin: number;
-};
-
-/** One AS path element: an AS number, or an AS_SET of AS numbers. */
-export type AsPathSegment = number | readonly number[];
-export type AsPath = readonly AsPathSegment[];
-
-export type Source = 'live' | 'simulated';
-
-/** One announcement of one prefix, as seen from one peer. */
-export type Observation = {
-  readonly announcedPrefix: Prefix;
-  readonly asPath: AsPath;
-  readonly peer: string;
-  readonly source: Source;
-  readonly seenAt: Date;
-};
-
 export type AlertKind = 'origin-mismatch' | 'unexpected-more-specific';
-
-/** The origin AS, or NONE when the AS path ends in an AS_SET. */
-export type Origin = { readonly asn: number } | 'NONE';
 
 export type Alert = {
   /** Stable identity: alert kind, source, announced prefix and origin AS. */

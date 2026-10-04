@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMonitor } from './monitor.ts';
-import type { Alert, MonitoredPrefix, Origin } from './monitor.ts';
+import type { MonitoredPrefix, Origin } from './domain.ts';
+import type { Alert } from './monitor.ts';
 import { parsePrefix } from './prefix.ts';
 import { createSimulator, isSimulationPreset, SimulatorSetupError } from './simulation.ts';
 

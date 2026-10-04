@@ -2,7 +2,7 @@
  * Reads the operator's configuration file and parses it at the boundary.
  */
 import { readFile } from 'node:fs/promises';
-import type { MonitoredPrefix } from './monitor.ts';
+import type { MonitoredPrefix } from './domain.ts';
 import { parseMonitorConfig } from './parsers/monitor-config.ts';
 
 export class MonitorConfigFileError extends Error {

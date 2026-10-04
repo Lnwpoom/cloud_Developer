@@ -5,7 +5,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMonitor } from './monitor.ts';
-import type { AsPath, MonitoredPrefix, Observation } from './monitor.ts';
+import type { AsPath, MonitoredPrefix, Observation } from './domain.ts';
 import { parsePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 import type { Vrp } from './rpki.ts';

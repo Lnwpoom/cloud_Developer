@@ -2,7 +2,7 @@
  * Simulation presets: fixed simulated announcements derived from the first
  * monitored prefix, fed through the same path as live observations.
  */
-import type { AsPath, MonitoredPrefix, Observation } from './monitor.ts';
+import type { AsPath, MonitoredPrefix, Observation } from './domain.ts';
 import { halvesOf, samePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 
