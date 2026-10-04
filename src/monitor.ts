@@ -3,6 +3,7 @@
  * alerts. No I/O; feed it observations and read or subscribe to its alerts.
  */
 import type { AsPath, MonitoredPrefix, Observation, Origin, Source } from './domain.ts';
+import { createListeners } from './listeners.ts';
 import { containsPrefix, samePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 import { looseRoaAdvisories, relevantVrps, validationState } from './rpki.ts';
@@ -66,7 +67,7 @@ export const createMonitor = (options: {
   const vrps = relevantVrps(options.monitoredPrefixes, options.vrps ?? []);
   const advisoryList = looseRoaAdvisories(options.monitoredPrefixes, vrps);
   const records = new Map<string, AlertRecord>();
-  const listeners = new Set<(change: MonitorChange) => void>();
+  const listeners = createListeners<MonitorChange>();
 
   /** The most specific monitored prefix that equals or contains `announced`, if any. */
   const governingPrefixOf = (announced: Prefix): MonitoredPrefix | undefined =>
@@ -76,10 +77,6 @@ export const createMonitor = (options: {
         (best, monitored) => (best === undefined || monitored.prefix.length > best.prefix.length ? monitored : best),
         undefined,
       );
-
-  const notify = (change: MonitorChange): void => {
-    for (const listener of listeners) listener(change);
-  };
 
   const observe = (observation: Observation): void => {
     const governing = governingPrefixOf(observation.announcedPrefix);
@@ -112,20 +109,12 @@ export const createMonitor = (options: {
     }
     if (record.peers.has(observation.peer)) return;
     record.peers.add(observation.peer);
-    notify({ type: 'alert', alert: snapshot(record) });
+    listeners.notify({ type: 'alert', alert: snapshot(record) });
   };
 
   const alerts = (): readonly Alert[] => [...records.values()].map(snapshot).reverse();
 
-  const onChange = (listener: (change: MonitorChange) => void): (() => void) => {
-    const subscription = (change: MonitorChange): void => {
-      listener(change);
-    };
-    listeners.add(subscription);
-    return () => listeners.delete(subscription);
-  };
-
   const advisories = (): readonly Advisory[] => advisoryList;
 
-  return { observe, alerts, advisories, onChange };
+  return { observe, alerts, advisories, onChange: listeners.add };
 };

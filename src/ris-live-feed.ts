@@ -5,6 +5,7 @@
  * reconnects with backoff when the connection drops or goes silent.
  */
 import type { MonitoredPrefix, Observation } from './domain.ts';
+import { createListeners } from './listeners.ts';
 import { parseRisLiveMessage } from './parsers/ris-live.ts';
 
 /** `connecting` only until the first attempt ends; any failed or dropped connection means `reconnecting`. */
@@ -60,7 +61,7 @@ export const startRisLiveFeed = (options: {
   const url = new URL(options.url);
   url.searchParams.set('client', options.client);
 
-  const listeners = new Set<(change: FeedChange) => void>();
+  const listeners = createListeners<FeedChange>();
   let status: FeedStatus = 'connecting';
   let observations = 0;
   let backoffMs = timing.initialBackoffMs;
@@ -69,14 +70,10 @@ export const startRisLiveFeed = (options: {
   let retry: NodeJS.Timeout | undefined;
   let watchdog: NodeJS.Timeout | undefined;
 
-  const notify = (change: FeedChange): void => {
-    for (const listener of listeners) listener(change);
-  };
-
   const setStatus = (next: FeedStatus): void => {
     if (next === status) return;
     status = next;
-    notify({ type: 'feed-status', status });
+    listeners.notify({ type: 'feed-status', status });
   };
 
   const handleFrame = (data: unknown): void => {
@@ -100,7 +97,7 @@ export const startRisLiveFeed = (options: {
     for (const observation of parsed.value.observations) {
       options.observe(observation);
       observations += 1;
-      notify({ type: 'observations', count: observations });
+      listeners.notify({ type: 'observations', count: observations });
     }
   };
 
@@ -156,13 +153,7 @@ export const startRisLiveFeed = (options: {
 
   return {
     state: () => ({ status, observations }),
-    onChange: (listener) => {
-      const subscriptionListener = (change: FeedChange): void => {
-        listener(change);
-      };
-      listeners.add(subscriptionListener);
-      return () => listeners.delete(subscriptionListener);
-    },
+    onChange: listeners.add,
     stop: () => {
       stopped = true;
       clearTimeout(retry);
