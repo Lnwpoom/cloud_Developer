@@ -28,6 +28,10 @@ _Avoid_: Route update, advertisement, message
 An announcement fabricated on purpose (e.g. for a demo) and fed in alongside the live feed; it is always marked as simulated.
 _Avoid_: Fake announcement, test data, injected route
 
+**Peer**:
+A BGP router on the feed's collector network from which an announcement was observed; the same announcement usually arrives from many peers.
+_Avoid_: Vantage point, collector, neighbour
+
 **Origin AS**:
 The last AS in an announcement's AS path, i.e. the AS claiming to originate the prefix.
 _Avoid_: Source AS, owner AS
@@ -39,7 +43,7 @@ _Avoid_: ROV result, RPKI status
 ### What the monitor reports
 
 **Alert**:
-What the monitor emits when an announcement touching a monitored prefix looks wrong; it states only technical facts, never intent.
+What the monitor emits when someone else's announcement touching a monitored prefix looks wrong; it states only technical facts, never intent. One alert stands for one alert kind, announced prefix and origin AS, however many peers it was seen from.
 _Avoid_: Hijack, incident, alarm
 
 **Alert kind**:
@@ -54,8 +58,12 @@ _Avoid_: Origin hijack, wrong AS
 An alert kind: a prefix strictly inside a monitored prefix is announced, and that prefix is not itself a monitored prefix — whatever its origin AS.
 _Avoid_: Sub-prefix hijack, more-specific hijack
 
+**Advisory**:
+Advice to the operator about a weakness in their own RPKI setup; unlike an alert, nobody else has announced anything.
+_Avoid_: Alert, warning
+
 **Loose ROA**:
-An alert kind: a ROA covering a monitored prefix allows a maxLength longer than the prefix itself, which lets a forged-origin more-specific validate as Valid.
+An advisory: a ROA covering a monitored prefix allows a maxLength longer than the prefix itself, which lets a forged-origin more-specific validate as Valid.
 _Avoid_: maxLength warning, ROA misconfiguration
 
 **Hijack**:
