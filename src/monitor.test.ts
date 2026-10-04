@@ -122,6 +122,177 @@ describe('Monitor', () => {
     );
   });
 
+  describe('more-specifics', () => {
+    it('raises an Unexpected more-specific when a prefix strictly inside a monitored prefix is announced by a foreign origin', () => {
+      const monitor = createMonitor({ monitoredPrefixes });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.113.128/25'), asPath: [64510, 64666] }));
+
+      assert.deepEqual(monitor.alerts(), [
+        {
+          id: 'unexpected-more-specific|live|203.0.113.128/25|AS64666',
+          kind: 'unexpected-more-specific',
+          source: 'live',
+          monitoredPrefix: '203.0.113.0/24',
+          declaredOrigin: 64500,
+          announcedPrefix: '203.0.113.128/25',
+          origin: { asn: 64666 },
+          validationState: 'NotFound',
+          examplePath: [64510, 64666],
+          firstSeen: new Date('2026-10-04T12:00:00Z'),
+          peerCount: 1,
+        },
+      ]);
+    });
+
+    it('still raises an Unexpected more-specific when a forged path ends in the declared origin', () => {
+      const monitor = createMonitor({ monitoredPrefixes });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.113.0/25'), asPath: [64510, 64666, 64500] }));
+
+      assert.deepEqual(
+        monitor.alerts().map(({ kind, announcedPrefix, origin }) => ({ kind, announcedPrefix, origin })),
+        [{ kind: 'unexpected-more-specific', announcedPrefix: '203.0.113.0/25', origin: { asn: 64500 } }],
+      );
+    });
+
+    it('ignores a less-specific announcement that covers a monitored prefix', () => {
+      const monitor = createMonitor({ monitoredPrefixes: [{ prefix: prefix('198.51.100.0/24'), declaredOrigin: 64500 }] });
+
+      for (const covering of ['198.51.100.0/23', '198.51.100.0/22', '0.0.0.0/0']) {
+        monitor.observe(announcement({ announcedPrefix: prefix(covering) }));
+      }
+
+      assert.deepEqual(monitor.alerts(), []);
+    });
+
+    it('ignores an announcement outside every monitored prefix, even with the same length', () => {
+      const monitor = createMonitor({ monitoredPrefixes });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.114.0/24') }));
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.114.0/25') }));
+
+      assert.deepEqual(monitor.alerts(), []);
+    });
+  });
+
+  describe('IPv6', () => {
+    const ipv6Monitored = [{ prefix: prefix('2001:db8::/32'), declaredOrigin: 64500 }];
+
+    it('raises an Unexpected more-specific for an IPv6 prefix strictly inside a monitored IPv6 prefix', () => {
+      const monitor = createMonitor({ monitoredPrefixes: ipv6Monitored });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('2001:db8:8000::/33'), asPath: [64510, 64666] }));
+      monitor.observe(announcement({ announcedPrefix: prefix('2001:db8:1234::/48'), asPath: [64510, 64500] }));
+
+      assert.deepEqual(
+        monitor.alerts().map(({ kind, monitoredPrefix, announcedPrefix, origin }) => ({
+          kind,
+          monitoredPrefix,
+          announcedPrefix,
+          origin,
+        })),
+        [
+          {
+            kind: 'unexpected-more-specific',
+            monitoredPrefix: '2001:db8::/32',
+            announcedPrefix: '2001:db8:1234::/48',
+            origin: { asn: 64500 },
+          },
+          {
+            kind: 'unexpected-more-specific',
+            monitoredPrefix: '2001:db8::/32',
+            announcedPrefix: '2001:db8:8000::/33',
+            origin: { asn: 64666 },
+          },
+        ],
+      );
+    });
+
+    it('ignores an IPv6 less-specific that covers a monitored IPv6 prefix, and an IPv6 neighbour outside it', () => {
+      const monitor = createMonitor({ monitoredPrefixes: ipv6Monitored });
+
+      for (const text of ['2001:db8::/31', '2001::/16', '::/0', '2001:db9::/32', '2001:db9::/48']) {
+        monitor.observe(announcement({ announcedPrefix: prefix(text) }));
+      }
+
+      assert.deepEqual(monitor.alerts(), []);
+    });
+  });
+
+  describe('AS_SET origin', () => {
+    it('raises an Origin mismatch with origin NONE when the path ends in an AS_SET, even one holding the declared origin', () => {
+      const monitor = createMonitor({ monitoredPrefixes });
+
+      monitor.observe(announcement({ asPath: [2497, 6453, 18705, 26281, [64500]] }));
+
+      assert.deepEqual(
+        monitor.alerts().map(({ id, kind, origin, examplePath }) => ({ id, kind, origin, examplePath })),
+        [
+          {
+            id: 'origin-mismatch|live|203.0.113.0/24|NONE',
+            kind: 'origin-mismatch',
+            origin: 'NONE',
+            examplePath: [2497, 6453, 18705, 26281, [64500]],
+          },
+        ],
+      );
+    });
+  });
+
+  describe('nested monitored prefixes', () => {
+    const nested = [
+      { prefix: prefix('203.0.113.0/24'), declaredOrigin: 64500 },
+      { prefix: prefix('203.0.113.128/25'), declaredOrigin: 64501 },
+    ];
+
+    it('stays quiet when a declared /25 inside a monitored /24 is announced by its declared origin', () => {
+      const monitor = createMonitor({ monitoredPrefixes: nested });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.113.128/25'), asPath: [64510, 64501] }));
+
+      assert.deepEqual(monitor.alerts(), []);
+    });
+
+    it('raises an Origin mismatch against the /25, not the /24, when another AS announces the declared /25', () => {
+      const monitor = createMonitor({ monitoredPrefixes: nested });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.113.128/25'), asPath: [64510, 64666] }));
+
+      assert.deepEqual(
+        monitor.alerts().map(({ kind, monitoredPrefix, declaredOrigin, announcedPrefix }) => ({
+          kind,
+          monitoredPrefix,
+          declaredOrigin,
+          announcedPrefix,
+        })),
+        [
+          {
+            kind: 'origin-mismatch',
+            monitoredPrefix: '203.0.113.128/25',
+            declaredOrigin: 64501,
+            announcedPrefix: '203.0.113.128/25',
+          },
+        ],
+      );
+    });
+
+    it('governs a more-specific by the most specific monitored prefix that contains it, whatever the list order', () => {
+      const monitor = createMonitor({ monitoredPrefixes: [...nested].reverse() });
+
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.113.192/26'), asPath: [64510, 64666] }));
+      monitor.observe(announcement({ announcedPrefix: prefix('203.0.113.0/26'), asPath: [64510, 64666] }));
+
+      assert.deepEqual(
+        monitor.alerts().map(({ kind, monitoredPrefix, announcedPrefix }) => ({ kind, monitoredPrefix, announcedPrefix })),
+        [
+          { kind: 'unexpected-more-specific', monitoredPrefix: '203.0.113.0/24', announcedPrefix: '203.0.113.0/26' },
+          { kind: 'unexpected-more-specific', monitoredPrefix: '203.0.113.128/25', announcedPrefix: '203.0.113.192/26' },
+        ],
+      );
+    });
+  });
+
   describe('onChange', () => {
     it('reports a newly raised alert and each later peer count rise', () => {
       const monitor = createMonitor({ monitoredPrefixes });

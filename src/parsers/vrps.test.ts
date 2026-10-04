@@ -1,16 +1,7 @@
 /**
- * Fixtures in ./fixtures are copies of real VRP files from public repositories
- * (retrieved 2026-10-04):
- *
- *   vrps-rpki-client-2023.json         jeffsw/rpkilog @ 9e83202d : python/rpkilog/tests/roa_test.rpkiclient2023_json
- *                                      (cut to 11 of 379 roas; lines otherwise unchanged)
- *   vrps-rpki-client-2021.json         jeffsw/rpkilog @ 9e83202d : python/rpkilog/tests/roa_test.rpkiclient2021_json
- *   vrps-routinator-2021.json          mellowdrifter/rpkirtr @ ef69b737 : data/string.json
- *                                      (real header; the upstream author inserted invalid maxLength entries)
- *   vrps-routinator-jsonext-2025.json  jeffsw/rpkilog @ 9e83202d : python/rpkilog/tests/roa_test.routinator_jsonext
- *   vrps-rtrtr-cloudflare-style.json   NLnetLabs/rtrtr @ 81a01421 : test-data/vrps-metadata.json (hand-written upstream)
- *
- * No real RIPEstat rpki-roas response could be found, so the RIPEstat case is
+ * Fixtures in ./fixtures/vrps are copies of real VRP files from public
+ * repositories; their sources are listed in the README there. No real
+ * RIPEstat rpki-roas response could be found, so the RIPEstat case is
  * written inline from the shape third-party clients read (`data.roas[]`).
  */
 import { describe, it } from 'node:test';
@@ -19,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { parseVrps } from './vrps.ts';
 
 const fixture = async (name: string): Promise<unknown> =>
-  JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+  JSON.parse(await readFile(new URL(`./fixtures/vrps/${name}`, import.meta.url), 'utf8'));
 
 type VrpRow = readonly [prefix: string, maxLength: number, asn: number];
 

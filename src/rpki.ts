@@ -3,7 +3,7 @@
  * state of an announcement, and Loose ROA advisories.
  */
 import type { MonitoredPrefix, Origin } from './monitor.ts';
-import { covers } from './prefix.ts';
+import { containsPrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 
 /** A validated ROA payload: `asn` may originate `prefix` and its more-specifics up to `maxLength`. */
@@ -23,7 +23,7 @@ export type ValidationState = 'Valid' | 'Invalid' | 'NotFound';
  * AS0 VRPs never match.
  */
 export const validationState = (vrps: readonly Vrp[], routePrefix: Prefix, origin: Origin): ValidationState => {
-  const covering = vrps.filter((vrp) => covers(vrp.prefix, routePrefix));
+  const covering = vrps.filter((vrp) => containsPrefix(vrp.prefix, routePrefix));
   if (covering.length === 0) return 'NotFound';
   const matched = covering.some(
     (vrp) =>
@@ -39,7 +39,7 @@ export const validationState = (vrps: readonly Vrp[], routePrefix: Prefix, origi
  */
 export const relevantVrps = (monitoredPrefixes: readonly MonitoredPrefix[], vrps: readonly Vrp[]): readonly Vrp[] =>
   vrps.filter((vrp) =>
-    monitoredPrefixes.some(({ prefix }) => covers(vrp.prefix, prefix) || covers(prefix, vrp.prefix)),
+    monitoredPrefixes.some(({ prefix }) => containsPrefix(vrp.prefix, prefix) || containsPrefix(prefix, vrp.prefix)),
   );
 
 /** Advice about the operator's own RPKI setup; nobody else has announced anything. */
@@ -59,7 +59,7 @@ export const looseRoaAdvisories = (
   const advisories = new Map<string, Advisory>();
   for (const { prefix } of monitoredPrefixes) {
     for (const vrp of vrps) {
-      if (!covers(vrp.prefix, prefix) || vrp.maxLength <= prefix.length) continue;
+      if (!containsPrefix(vrp.prefix, prefix) || vrp.maxLength <= prefix.length) continue;
       const roa = { prefix: vrp.prefix.text, maxLength: vrp.maxLength, asn: vrp.asn };
       const id = ['loose-roa', prefix.text, `${roa.prefix}-${String(roa.maxLength)}`, `AS${String(roa.asn)}`].join('|');
       advisories.set(id, { id, kind: 'loose-roa', monitoredPrefix: prefix.text, roa });

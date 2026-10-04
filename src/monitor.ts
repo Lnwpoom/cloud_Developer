@@ -2,7 +2,7 @@
  * The Monitor: the detection core. It turns observed announcements into
  * alerts. No I/O; feed it observations and read or subscribe to its alerts.
  */
-import { samePrefix } from './prefix.ts';
+import { containsPrefix, samePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
 import { looseRoaAdvisories, relevantVrps, validationState } from './rpki.ts';
 import type { Advisory, ValidationState, Vrp } from './rpki.ts';
@@ -27,7 +27,7 @@ export type Observation = {
   readonly seenAt: Date;
 };
 
-export type AlertKind = 'origin-mismatch';
+export type AlertKind = 'origin-mismatch' | 'unexpected-more-specific';
 
 /** The origin AS, or NONE when the AS path ends in an AS_SET. */
 export type Origin = { readonly asn: number } | 'NONE';
@@ -86,18 +86,27 @@ export const createMonitor = (options: {
   const records = new Map<string, AlertRecord>();
   const listeners = new Set<(change: MonitorChange) => void>();
 
+  /** The most specific monitored prefix that equals or contains `announced`, if any. */
+  const governingPrefixOf = (announced: Prefix): MonitoredPrefix | undefined =>
+    options.monitoredPrefixes
+      .filter((monitored) => containsPrefix(monitored.prefix, announced))
+      .reduce<MonitoredPrefix | undefined>(
+        (best, monitored) => (best === undefined || monitored.prefix.length > best.prefix.length ? monitored : best),
+        undefined,
+      );
+
   const notify = (change: MonitorChange): void => {
     for (const listener of listeners) listener(change);
   };
 
   const observe = (observation: Observation): void => {
-    const governing = options.monitoredPrefixes.find((monitored) =>
-      samePrefix(monitored.prefix, observation.announcedPrefix),
-    );
+    const governing = governingPrefixOf(observation.announcedPrefix);
     if (governing === undefined) return;
     const origin = originOf(observation.asPath);
-    if (origin !== 'NONE' && origin.asn === governing.declaredOrigin) return;
-    const kind: AlertKind = 'origin-mismatch';
+    const kind: AlertKind = samePrefix(governing.prefix, observation.announcedPrefix)
+      ? 'origin-mismatch'
+      : 'unexpected-more-specific';
+    if (kind === 'origin-mismatch' && origin !== 'NONE' && origin.asn === governing.declaredOrigin) return;
     const id = [kind, observation.source, observation.announcedPrefix.text, originText(origin)].join('|');
 
     let record = records.get(id);

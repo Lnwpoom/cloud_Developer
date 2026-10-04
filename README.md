@@ -11,7 +11,9 @@ npm install
 npm start
 ```
 
-Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises.
+The service connects to RIPE RIS Live and subscribes to announcements of every monitored prefix and its more-specifics. The page shows the live feed status (connecting, connected, reconnecting) and how many announcements it has observed; alerts from the feed are marked LIVE. The documentation prefixes in the sample configuration never appear on the real Internet, so use a prefix that is actually announced to see the counter move.
+
+Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises. **Simulate: more-specific** announces the first monitored prefix plus one bit from a foreign AS, and **Simulate: forged origin + more-specific** announces the same longer prefix with the path `[foreign AS, declared origin]` (the Celer Bridge pattern); both raise an Unexpected more-specific alert.
 
 ## Configure it
 
@@ -42,6 +44,8 @@ Environment variables (all optional):
 | `MONITOR_CONFIG_FILE` | `monitor.config.json` | Path to the configuration file |
 | `VRP_URL` | `https://console.rpki-client.org/vrps.json` | VRP JSON endpoint fetched at startup |
 | `VRP_CACHE_FILE` | `vrps.cache.json` | Last fetched VRP JSON, used when the endpoint is unreachable |
+| `RIS_LIVE_URL` | `wss://ris-live.ripe.net/v1/ws/` | RIPE RIS Live WebSocket URL (`ws://` or `wss://`) |
+| `RIS_LIVE_CLIENT` | `bgp-hijack-monitor` | `client` identifier sent to RIS Live; name your deployment |
 
 For example: `PORT=3000 MONITOR_CONFIG_FILE=/etc/bgp/prefixes.json npm start`.
 
@@ -56,12 +60,13 @@ npm test
 Layout:
 
 - `src/monitor.ts`: the Monitor, the detection core (no I/O).
-- `src/prefix.ts`: IPv4/IPv6 prefix parsing.
+- `src/prefix.ts`: IPv4/IPv6 prefix parsing and containment.
 - `src/rpki.ts`: RFC 6811 validation state and Loose ROA advisories, used by the Monitor.
-- `src/parsers/`: boundary parsers from `unknown` input (configuration file, VRP JSON), with real-data fixtures.
+- `src/parsers/`: boundary parsers from `unknown` input (configuration file, VRP JSON, RIS Live frames). Real fixtures and their sources are in `src/parsers/fixtures/vrps/` and `src/parsers/fixtures/ris-live/`.
 - `src/vrp-source.ts`: fetches the VRPs at startup, with the cache fallback.
+- `src/ris-live-feed.ts`: the RIS Live WebSocket client (subscribe, count, ping, reconnect with backoff).
 - `src/monitor-config-file.ts`: reads and parses the configuration file.
 - `src/config.ts`: the only reader of `process.env`.
 - `src/simulation.ts`: simulation presets, one synthetic peer per press.
-- `src/server.ts`: the page, server-sent events at `/events` and `POST /simulate/:preset`.
+- `src/server.ts`: the page, server-sent events at `/events` (`snapshot`, `alert`, `feed-status`, `observations`) and `POST /simulate/:preset`.
 - `public/index.html`: the web page.

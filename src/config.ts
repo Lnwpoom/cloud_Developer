@@ -8,12 +8,16 @@
  *                        (default https://console.rpki-client.org/vrps.json)
  *   VRP_CACHE_FILE       where the last fetched VRP JSON is kept, used when the
  *                        endpoint is unreachable (default vrps.cache.json)
+ *   RIS_LIVE_URL         RIS Live WebSocket URL (default wss://ris-live.ripe.net/v1/ws/)
+ *   RIS_LIVE_CLIENT      `client` identifier sent to RIS Live (default bgp-hijack-monitor)
  */
 export type Config = {
   readonly port: number;
   readonly monitorConfigFile: string;
   readonly vrpUrl: string;
   readonly vrpCacheFile: string;
+  readonly risLiveUrl: string;
+  readonly risLiveClient: string;
 };
 
 export type Environment = Readonly<Record<string, string | undefined>>;
@@ -27,6 +31,8 @@ const DEFAULTS: Config = {
   monitorConfigFile: 'monitor.config.json',
   vrpUrl: 'https://console.rpki-client.org/vrps.json',
   vrpCacheFile: 'vrps.cache.json',
+  risLiveUrl: 'wss://ris-live.ripe.net/v1/ws/',
+  risLiveClient: 'bgp-hijack-monitor',
 };
 
 const parsePort = (value: string | undefined): number => {
@@ -53,11 +59,28 @@ const parseHttpUrl = (name: string, value: string | undefined, fallback: string)
   return url.href;
 };
 
+const parseRisLiveUrl = (value: string | undefined): string => {
+  if (value === undefined) return DEFAULTS.risLiveUrl;
+  const url = URL.canParse(value) ? new URL(value) : undefined;
+  if (url === undefined || (url.protocol !== 'ws:' && url.protocol !== 'wss:')) {
+    throw new ConfigError(`RIS_LIVE_URL must be a ws:// or wss:// URL, got "${value}"`);
+  }
+  return value;
+};
+
+const parseRisLiveClient = (value: string | undefined): string => {
+  if (value === undefined) return DEFAULTS.risLiveClient;
+  if (value.trim() === '') throw new ConfigError('RIS_LIVE_CLIENT must not be empty');
+  return value;
+};
+
 export const parseConfig = (env: Environment): Config => ({
   port: parsePort(env['PORT']),
   monitorConfigFile: parseFilePath('MONITOR_CONFIG_FILE', env['MONITOR_CONFIG_FILE'], DEFAULTS.monitorConfigFile),
   vrpUrl: parseHttpUrl('VRP_URL', env['VRP_URL'], DEFAULTS.vrpUrl),
   vrpCacheFile: parseFilePath('VRP_CACHE_FILE', env['VRP_CACHE_FILE'], DEFAULTS.vrpCacheFile),
+  risLiveUrl: parseRisLiveUrl(env['RIS_LIVE_URL']),
+  risLiveClient: parseRisLiveClient(env['RIS_LIVE_CLIENT']),
 });
 
 export const readConfig = (): Config => parseConfig(process.env);

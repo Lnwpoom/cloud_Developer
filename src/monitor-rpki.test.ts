@@ -108,21 +108,17 @@ describe('Monitor validation state (RFC 6811)', () => {
     assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8:fffe::/48', 48, 64666)] }, route), 'NotFound');
   });
 
-  it(
-    'is Valid for a forged-origin more-specific under a loose ROA, and the alert is still raised (RFC 9319)',
-    { todo: 'needs the Unexpected more-specific alert kind from ticket #6' },
-    () => {
-      const vrps = [vrp('203.0.113.0/24', 25, 64500)];
-      const monitor = createMonitor({ monitoredPrefixes: ipv4, vrps });
+  it('is Valid for a forged-origin more-specific under a loose ROA, and the alert is still raised (RFC 9319)', () => {
+    const vrps = [vrp('203.0.113.0/24', 25, 64500)];
+    const monitor = createMonitor({ monitoredPrefixes: ipv4, vrps });
 
-      monitor.observe(announcement('203.0.113.0/25', [64510, 64666, 64500]));
+    monitor.observe(announcement('203.0.113.0/25', [64510, 64666, 64500]));
 
-      assert.deepEqual(
-        monitor.alerts().map((alert) => [alert.kind, alert.validationState]),
-        [['unexpected-more-specific', 'Valid']],
-      );
-    },
-  );
+    assert.deepEqual(
+      monitor.alerts().map((alert) => [alert.kind, alert.validationState]),
+      [['unexpected-more-specific', 'Valid']],
+    );
+  });
 
   it('is only context: an alert is raised whatever the state, and none for the declared origin even if Invalid', () => {
     const vrps = [vrp('203.0.113.0/24', 24, 64999)];

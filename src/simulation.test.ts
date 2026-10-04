@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMonitor } from './monitor.ts';
-import type { MonitoredPrefix, Origin } from './monitor.ts';
+import type { Alert, MonitoredPrefix, Origin } from './monitor.ts';
 import { parsePrefix } from './prefix.ts';
 import { createSimulator, isSimulationPreset } from './simulation.ts';
 
@@ -76,8 +76,107 @@ describe('Simulator', () => {
     );
   });
 
+  const summary = (alert: Alert | undefined) => {
+    assert.ok(alert);
+    const { kind, source, monitoredPrefix, declaredOrigin, announcedPrefix, peerCount } = alert;
+    return { kind, source, monitoredPrefix, declaredOrigin, announcedPrefix, peerCount };
+  };
+
+  it('"more-specific" raises a SIMULATED Unexpected more-specific for the first monitored prefix plus one bit, from a private-use AS', () => {
+    const { monitor, simulator } = setUp([
+      monitored('203.0.113.0/24', 64500),
+      monitored('198.51.100.0/24', 64501),
+    ]);
+
+    simulator.press('more-specific');
+
+    const [alert, ...others] = monitor.alerts();
+    assert.deepEqual(others, []);
+    assert.deepEqual(summary(alert), {
+      kind: 'unexpected-more-specific',
+      source: 'simulated',
+      monitoredPrefix: '203.0.113.0/24',
+      declaredOrigin: 64500,
+      announcedPrefix: '203.0.113.0/25',
+      peerCount: 1,
+    });
+    assert.ok(alert && isPrivateUseAsn(alert.origin), `origin ${JSON.stringify(alert?.origin)} is not private-use`);
+  });
+
+  it('"forged-origin-more-specific" announces the same longer prefix with path [foreign AS, declared origin]', () => {
+    const { monitor, simulator } = setUp([monitored('2001:db8::/32', 64500)]);
+
+    simulator.press('forged-origin-more-specific');
+
+    const [alert, ...others] = monitor.alerts();
+    assert.deepEqual(others, []);
+    assert.deepEqual(summary(alert), {
+      kind: 'unexpected-more-specific',
+      source: 'simulated',
+      monitoredPrefix: '2001:db8::/32',
+      declaredOrigin: 64500,
+      announcedPrefix: '2001:db8::/33',
+      peerCount: 1,
+    });
+    assert.ok(alert);
+    assert.deepEqual(alert.origin, { asn: 64500 });
+    assert.equal(alert.examplePath.length, 2);
+    const [foreign] = alert.examplePath;
+    assert.ok(typeof foreign === 'number' && foreign !== 64500 && isPrivateUseAsn({ asn: foreign }));
+  });
+
+  it('repeated presses of each more-specific preset bump the peer count of one alert per preset', () => {
+    const { monitor, simulator } = setUp([monitored('203.0.113.0/24', 64500)]);
+
+    for (let press = 0; press < 3; press += 1) simulator.press('more-specific');
+    for (let press = 0; press < 2; press += 1) simulator.press('forged-origin-more-specific');
+
+    assert.deepEqual(
+      monitor.alerts().map((alert) => [alert.kind, alert.origin, alert.peerCount]),
+      [
+        ['unexpected-more-specific', { asn: 64500 }, 2],
+        ['unexpected-more-specific', { asn: 64666 }, 3],
+      ],
+    );
+  });
+
+  it('announces the upper half when the lower half is itself a monitored prefix, so the press still shows a more-specific', () => {
+    const { monitor, simulator } = setUp([
+      monitored('203.0.113.0/24', 64500),
+      monitored('203.0.113.0/25', 64500),
+    ]);
+
+    simulator.press('more-specific');
+    simulator.press('forged-origin-more-specific');
+
+    assert.deepEqual(
+      monitor.alerts().map((alert) => [alert.kind, alert.monitoredPrefix, alert.announcedPrefix]),
+      [
+        ['unexpected-more-specific', '203.0.113.0/24', '203.0.113.128/25'],
+        ['unexpected-more-specific', '203.0.113.0/24', '203.0.113.128/25'],
+      ],
+    );
+  });
+
+  it('refuses a more-specific preset when the first monitored prefix has no longer prefix inside it, and observes nothing', () => {
+    for (const text of ['192.0.2.1/32', '2001:db8::1/128']) {
+      const { monitor, simulator } = setUp([monitored(text, 64500)]);
+
+      const outcomes = [simulator.press('more-specific'), simulator.press('forged-origin-more-specific')];
+
+      assert.deepEqual(
+        outcomes.map((outcome) => outcome.ok),
+        [false, false],
+      );
+      assert.deepEqual(monitor.alerts(), []);
+      assert.deepEqual(simulator.press('origin-mismatch'), { ok: true });
+    }
+  });
+
   it('recognises only the known preset names', () => {
     assert.equal(isSimulationPreset('origin-mismatch'), true);
+    assert.equal(isSimulationPreset('more-specific'), true);
+    assert.equal(isSimulationPreset('forged-origin-more-specific'), true);
     assert.equal(isSimulationPreset('hijack'), false);
   });
 });
