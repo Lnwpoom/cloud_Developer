@@ -53,7 +53,11 @@ export type MonitorChange = { readonly type: 'alert'; readonly alert: Alert };
 
 export type Monitor = {
   readonly observe: (observation: Observation) => void;
-  /** Current alerts, newest first. */
+  /**
+   * Current alerts, newest raised first: the order the Monitor raised them, not
+   * `firstSeen`, which comes from the RIS timestamp for live alerts but the
+   * server clock for simulated ones. A later peer never reorders an alert.
+   */
   readonly alerts: () => readonly Alert[];
   /** Loose ROA advisories, computed once at creation from the VRPs; they never change. */
   readonly advisories: () => readonly Advisory[];

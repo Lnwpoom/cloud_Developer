@@ -122,6 +122,19 @@ describe('Monitor', () => {
     );
   });
 
+  it('lists alerts newest raised first, even when a later-raised alert carries an earlier first-seen time', () => {
+    const monitor = createMonitor({ monitoredPrefixes });
+
+    monitor.observe(announcement({ source: 'simulated', asPath: [64666], seenAt: new Date('2026-10-04T12:00:00Z') }));
+    monitor.observe(announcement({ source: 'live', asPath: [64777], seenAt: new Date('2026-10-04T11:00:00Z') }));
+    monitor.observe(announcement({ source: 'simulated', asPath: [64666], peer: 'another-peer' }));
+
+    assert.deepEqual(
+      monitor.alerts().map((alert) => alert.id),
+      ['origin-mismatch|live|203.0.113.0/24|AS64777', 'origin-mismatch|simulated|203.0.113.0/24|AS64666'],
+    );
+  });
+
   describe('more-specifics', () => {
     it('raises an Unexpected more-specific when a prefix strictly inside a monitored prefix is announced by a foreign origin', () => {
       const monitor = createMonitor({ monitoredPrefixes });

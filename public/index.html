@@ -183,7 +183,10 @@
     document.getElementById('no-advisories').hidden = advisories.length > 0;
   };
 
-  const newestFirst = (a, b) => Date.parse(b.alert.firstSeen) - Date.parse(a.alert.firstSeen) || b.arrival - a.arrival;
+  // Newest raised first: the snapshot lists alerts in the Monitor's raise order (newest first) and
+  // later alert events arrive in raise order. Never sort by firstSeen: live alerts carry the RIS
+  // timestamp but simulated ones the server clock.
+  const newestFirst = (a, b) => b.arrival - a.arrival;
 
   const render = (changedId) => {
     const list = document.getElementById('alerts');
