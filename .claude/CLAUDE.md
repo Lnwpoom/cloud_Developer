@@ -23,3 +23,17 @@ A change is done when typecheck, lint and the test suite all pass (run the match
 - Shaping a module's interface or seams → `codebase-design`
 - Reviewing a branch or PR → `code-review`
 - Writing a PR body → `pr`
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues for `Lnwpoom/cloud_Developer`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `GLOSSARY.md` plus `docs/adr/`. See `docs/agents/domain.md`.
