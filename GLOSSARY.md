@@ -32,6 +32,10 @@ _Avoid_: Fake announcement, test data, injected route
 A BGP router on the feed's collector network from which an announcement was observed; the same announcement usually arrives from many peers.
 _Avoid_: Vantage point, collector, neighbour
 
+**Observation**:
+One sighting of an announcement from one peer, live or simulated; the same announcement seen from ten peers is ten observations.
+_Avoid_: Sighting, event, update
+
 **Origin AS**:
 The last AS in an announcement's AS path, i.e. the AS claiming to originate the prefix.
 _Avoid_: Source AS, owner AS
