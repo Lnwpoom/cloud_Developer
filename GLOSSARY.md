@@ -14,11 +14,19 @@ _Avoid_: User, customer, admin
 An IP prefix the operator has declared as theirs and wants watched.
 _Avoid_: Watched network, protected range
 
+**Declared origin**:
+The AS the operator states should originate a monitored prefix; the primary yardstick for raising alerts.
+_Avoid_: Expected AS, owner AS, legitimate origin
+
 ### What is observed
 
 **Announcement**:
 A single BGP route advertisement seen on the feed: a prefix plus the AS path that carries it.
 _Avoid_: Route update, advertisement, message
+
+**Simulated announcement**:
+An announcement fabricated on purpose (e.g. for a demo) and fed in alongside the live feed; it is always marked as simulated.
+_Avoid_: Fake announcement, test data, injected route
 
 **Origin AS**:
 The last AS in an announcement's AS path, i.e. the AS claiming to originate the prefix.
