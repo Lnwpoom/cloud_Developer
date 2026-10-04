@@ -1,0 +1,62 @@
+/**
+ * Entry point: parse the environment and configuration file, wire the
+ * Monitor to the simulator and the web server, and listen.
+ */
+import { readFile } from 'node:fs/promises';
+import type { Server } from 'node:http';
+import { readConfig } from './config.ts';
+import { createMonitor } from './monitor.ts';
+import { loadMonitorConfigFile } from './monitor-config-file.ts';
+import { createWebServer } from './server.ts';
+import { createSimulator } from './simulation.ts';
+
+const PAGE_URL = new URL('../public/index.html', import.meta.url);
+
+const listen = (server: Server, port: number): Promise<void> =>
+  new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, () => {
+      server.off('error', reject);
+      resolve();
+    });
+  });
+
+/** The error message followed by each `cause` in turn, unless already quoted above it. */
+const describeError = (error: unknown): string => {
+  const lines: string[] = [];
+  let current: unknown = error;
+  while (current !== undefined) {
+    const line = current instanceof Error ? current.message : JSON.stringify(current);
+    if (!lines.some((previous) => previous.includes(line))) lines.push(line);
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return lines.join('\n  caused by: ');
+};
+
+const main = async (): Promise<void> => {
+  const config = readConfig();
+  const [monitoredPrefixes, page] = await Promise.all([
+    loadMonitorConfigFile(config.monitorConfigFile),
+    readFile(PAGE_URL, 'utf8'),
+  ]);
+
+  const monitor = createMonitor({ monitoredPrefixes });
+  const simulator = createSimulator({ monitoredPrefixes, observe: monitor.observe, now: () => new Date() });
+  const server = createWebServer({ monitor, simulator, page });
+
+  try {
+    await listen(server, config.port);
+  } catch (cause) {
+    throw new Error(`Cannot listen on port ${String(config.port)}`, { cause });
+  }
+  const watched = monitoredPrefixes
+    .map((monitored) => `${monitored.prefix.text} (AS${String(monitored.declaredOrigin)})`)
+    .join(', ');
+  console.log(`BGP Hijack Monitor watching ${watched}`);
+  console.log(`Open http://localhost:${String(config.port)}/`);
+};
+
+main().catch((error: unknown) => {
+  console.error(`BGP Hijack Monitor failed to start: ${describeError(error)}`);
+  process.exitCode = 1;
+});
