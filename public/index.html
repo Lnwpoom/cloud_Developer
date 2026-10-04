@@ -95,7 +95,7 @@
     <div class="alert-head">
       <span class="badge"></span>
       <span class="kind"></span>
-      <span class="peers"><strong></strong> peers</span>
+      <span class="peers"><strong></strong> <span class="peers-unit">peers</span></span>
     </div>
     <dl>
       <dt>Monitored prefix</dt><dd data-field="monitoredPrefix"></dd>
@@ -157,6 +157,7 @@
     badge.classList.add(alert.source);
     item.querySelector('.kind').textContent = KIND_LABELS[alert.kind] ?? alert.kind;
     item.querySelector('.peers strong').textContent = String(alert.peerCount);
+    item.querySelector('.peers-unit').textContent = alert.peerCount === 1 ? 'peer' : 'peers';
     for (const [field, text] of Object.entries(fieldsOf(alert))) {
       item.querySelector(`[data-field="${field}"]`).textContent = text;
     }
