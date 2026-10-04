@@ -3,17 +3,22 @@
  * server-sent events, and exposes one endpoint per simulation preset.
  *
  *   GET  /                  the page
- *   GET  /events            SSE stream: `snapshot` once, then `alert` per change
+ *   GET  /events            SSE stream: `snapshot` once (alerts and advisories), then `alert` per change
  *   POST /simulate/:preset  feed one simulated announcement (204, or 404 if unknown)
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { Alert, Monitor } from './monitor.ts';
+import type { Advisory } from './rpki.ts';
 import { isSimulationPreset } from './simulation.ts';
 import type { Simulator } from './simulation.ts';
 
 /** Sent once when a page connects; later tickets add fields beside `alerts`. */
-export type Snapshot = { readonly alerts: readonly Alert[] };
+export type Snapshot = {
+  readonly alerts: readonly Alert[];
+  /** Fixed at startup, so they are sent only here. */
+  readonly advisories: readonly Advisory[];
+};
 
 const HEARTBEAT_MS = 15_000;
 
@@ -27,7 +32,10 @@ const streamEvents = (monitor: Monitor, request: IncomingMessage, response: Serv
     'cache-control': 'no-cache',
     connection: 'keep-alive',
   });
-  const snapshot: Snapshot = { alerts: monitor.alerts() };
+  const snapshot: Snapshot = {
+    alerts: monitor.alerts(),
+    advisories: monitor.advisories(),
+  };
   sendEvent(response, 'snapshot', snapshot);
   const unsubscribe = monitor.onChange((change) => {
     sendEvent(response, change.type, change.alert);

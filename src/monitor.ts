@@ -4,6 +4,8 @@
  */
 import { samePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
+import { looseRoaAdvisories, relevantVrps, validationState } from './rpki.ts';
+import type { Advisory, ValidationState, Vrp } from './rpki.ts';
 
 export type MonitoredPrefix = {
   readonly prefix: Prefix;
@@ -39,6 +41,8 @@ export type Alert = {
   readonly declaredOrigin: number;
   readonly announcedPrefix: string;
   readonly origin: Origin;
+  /** RFC 6811 state against the VRPs loaded at startup. Context only: it never decides whether an alert is raised. */
+  readonly validationState: ValidationState;
   readonly examplePath: AsPath;
   readonly firstSeen: Date;
   readonly peerCount: number;
@@ -51,6 +55,8 @@ export type Monitor = {
   readonly observe: (observation: Observation) => void;
   /** Current alerts, newest first. */
   readonly alerts: () => readonly Alert[];
+  /** Loose ROA advisories, computed once at creation from the VRPs; they never change. */
+  readonly advisories: () => readonly Advisory[];
   /** Calls `listener` after every change. Returns a function that unsubscribes. */
   readonly onChange: (listener: (change: MonitorChange) => void) => () => void;
 };
@@ -72,7 +78,11 @@ const snapshot = (record: AlertRecord): Alert => ({ ...record.alert, peerCount: 
 
 export const createMonitor = (options: {
   readonly monitoredPrefixes: readonly MonitoredPrefix[];
+  /** VRPs loaded at startup; none means every validation state is NotFound. */
+  readonly vrps?: readonly Vrp[];
 }): Monitor => {
+  const vrps = relevantVrps(options.monitoredPrefixes, options.vrps ?? []);
+  const advisoryList = looseRoaAdvisories(options.monitoredPrefixes, vrps);
   const records = new Map<string, AlertRecord>();
   const listeners = new Set<(change: MonitorChange) => void>();
 
@@ -101,6 +111,7 @@ export const createMonitor = (options: {
           declaredOrigin: governing.declaredOrigin,
           announcedPrefix: observation.announcedPrefix.text,
           origin,
+          validationState: validationState(vrps, observation.announcedPrefix, origin),
           examplePath: observation.asPath,
           firstSeen: observation.seenAt,
         },
@@ -123,5 +134,7 @@ export const createMonitor = (options: {
     return () => listeners.delete(subscription);
   };
 
-  return { observe, alerts, onChange };
+  const advisories = (): readonly Advisory[] => advisoryList;
+
+  return { observe, alerts, advisories, onChange };
 };

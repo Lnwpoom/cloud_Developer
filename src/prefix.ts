@@ -100,3 +100,10 @@ export const parsePrefix = (text: string): PrefixParseResult => {
 
 export const samePrefix = (a: Prefix, b: Prefix): boolean =>
   a.family === b.family && a.length === b.length && a.network === b.network;
+
+/** True when `inner` equals `outer` or is a more-specific inside it (RFC 6811 "Covered"). */
+export const covers = (outer: Prefix, inner: Prefix): boolean => {
+  if (outer.family !== inner.family || inner.length < outer.length) return false;
+  const hostBits = BigInt(FAMILIES[outer.family].bits - outer.length);
+  return inner.network >> hostBits === outer.network >> hostBits;
+};

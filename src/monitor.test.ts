@@ -37,6 +37,7 @@ describe('Monitor', () => {
         declaredOrigin: 64500,
         announcedPrefix: '203.0.113.0/24',
         origin: { asn: 64666 },
+        validationState: 'NotFound',
         examplePath: [64510, 64666],
         firstSeen: new Date('2026-10-04T12:00:00Z'),
         peerCount: 1,

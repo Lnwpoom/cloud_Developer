@@ -28,12 +28,20 @@ List your monitored prefixes and the declared origin of each in `monitor.config.
 
 The simulation buttons use the first monitored prefix. If the file is missing or malformed, the service refuses to start and names the file and the problem.
 
+## RPKI
+
+At startup the service fetches VRPs once from `VRP_URL` (rpki-client, Routinator or RIPEstat JSON) and saves the raw response to `VRP_CACHE_FILE`. If the fetch fails it uses that cache, and if there is no usable cache either it refuses to start. VRPs are not refreshed while it runs. Before a demo on an unreliable network, start it once with a working connection so the cache exists.
+
+Every alert shows its RFC 6811 validation state (Valid, Invalid or NotFound) as context; it never decides whether an alert is raised. The **Advisories** section lists each **Loose ROA**: a ROA covering a monitored prefix whose maxLength is longer than the prefix.
+
 Environment variables (all optional):
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PORT` | `8080` | HTTP port of the web page |
 | `MONITOR_CONFIG_FILE` | `monitor.config.json` | Path to the configuration file |
+| `VRP_URL` | `https://console.rpki-client.org/vrps.json` | VRP JSON endpoint fetched at startup |
+| `VRP_CACHE_FILE` | `vrps.cache.json` | Last fetched VRP JSON, used when the endpoint is unreachable |
 
 For example: `PORT=3000 MONITOR_CONFIG_FILE=/etc/bgp/prefixes.json npm start`.
 
@@ -49,7 +57,9 @@ Layout:
 
 - `src/monitor.ts`: the Monitor, the detection core (no I/O).
 - `src/prefix.ts`: IPv4/IPv6 prefix parsing.
-- `src/parsers/`: boundary parsers from `unknown` input (configuration file).
+- `src/rpki.ts`: RFC 6811 validation state and Loose ROA advisories, used by the Monitor.
+- `src/parsers/`: boundary parsers from `unknown` input (configuration file, VRP JSON), with real-data fixtures.
+- `src/vrp-source.ts`: fetches the VRPs at startup, with the cache fallback.
 - `src/monitor-config-file.ts`: reads and parses the configuration file.
 - `src/config.ts`: the only reader of `process.env`.
 - `src/simulation.ts`: simulation presets, one synthetic peer per press.

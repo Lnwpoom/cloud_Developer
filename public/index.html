@@ -8,12 +8,14 @@
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc;
     --accent: #b42318; --accent-bg: #fdecea; --sim: #6941c6; --sim-bg: #f1ebfd; --ok: #067647;
+    --warn: #b54708; --warn-bg: #fef0c7;
     color-scheme: light dark;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #9b9a93; --line: #34342f;
       --accent: #ff8a7a; --accent-bg: #3a1f1b; --sim: #c3a6ff; --sim-bg: #2a2140; --ok: #6ce9a6;
+      --warn: #fdb022; --warn-bg: #3a2c12;
     }
   }
   * { box-sizing: border-box; }
@@ -45,6 +47,15 @@
   dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
   .flash { animation: flash 1s ease-out; }
   @keyframes flash { from { background: var(--sim-bg); } to { background: var(--panel); } }
+  dd[data-state="Valid"] { color: var(--ok); }
+  dd[data-state="Invalid"] { color: var(--accent); }
+  dd[data-state="NotFound"] { color: var(--muted); }
+  .hint { color: var(--muted); font-family: system-ui, sans-serif; font-size: 13px; }
+  ol#advisories { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .advisory { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--warn);
+    border-radius: 10px; padding: 12px 14px; }
+  .advisory .kind { color: var(--warn); }
+  .advisory p { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -53,6 +64,10 @@
     <h1>BGP Hijack Monitor</h1>
     <span id="connection" class="status" data-state="connecting">Connecting to the monitor&hellip;</span>
   </header>
+
+  <h2>Advisories <span class="hint">about your own RPKI setup</span></h2>
+  <p id="no-advisories" class="empty">No advisories. No ROA covering your monitored prefixes allows a maxLength longer than the prefix.</p>
+  <ol id="advisories"></ol>
 
   <h2>Simulation</h2>
   <div class="controls">
@@ -76,14 +91,32 @@
       <dt>Announced prefix</dt><dd data-field="announcedPrefix"></dd>
       <dt>Origin AS</dt><dd data-field="origin"></dd>
       <dt>Declared origin</dt><dd data-field="declaredOrigin"></dd>
+      <dt>RPKI validation</dt><dd data-field="validationState"></dd>
       <dt>Example AS path</dt><dd data-field="examplePath"></dd>
       <dt>First seen</dt><dd data-field="firstSeen"></dd>
     </dl>
   </li>
 </template>
 
+<template id="advisory-template">
+  <li class="advisory">
+    <div class="alert-head"><span class="kind"></span></div>
+    <dl>
+      <dt>Monitored prefix</dt><dd data-field="monitoredPrefix"></dd>
+      <dt>ROA</dt><dd data-field="roa"></dd>
+    </dl>
+    <p></p>
+  </li>
+</template>
+
 <script>
   const KIND_LABELS = { 'origin-mismatch': 'Origin mismatch' };
+  const ADVISORY_LABELS = { 'loose-roa': 'Loose ROA' };
+  const VALIDATION_LABELS = {
+    Valid: 'Valid (RPKI alone would accept this announcement)',
+    Invalid: 'Invalid (routers doing ROV would reject this announcement)',
+    NotFound: 'NotFound (no ROA covers this prefix)',
+  };
   const alerts = new Map();
   let arrivals = 0;
 
@@ -97,6 +130,7 @@
     announcedPrefix: alert.announcedPrefix,
     origin: originText(alert.origin),
     declaredOrigin: asText(alert.declaredOrigin),
+    validationState: VALIDATION_LABELS[alert.validationState] ?? alert.validationState,
     examplePath: pathText(alert.examplePath),
     firstSeen: new Date(alert.firstSeen).toLocaleString(),
   });
@@ -112,7 +146,27 @@
     for (const [field, text] of Object.entries(fieldsOf(alert))) {
       item.querySelector(`[data-field="${field}"]`).textContent = text;
     }
+    item.querySelector('[data-field="validationState"]').dataset.state = alert.validationState;
     return item;
+  };
+
+  const renderAdvisory = (advisory) => {
+    const item = document.getElementById('advisory-template').content.firstElementChild.cloneNode(true);
+    const { roa } = advisory;
+    const roaText = `${roa.prefix}, maxLength ${roa.maxLength}, ${asText(roa.asn)}`;
+    item.querySelector('.kind').textContent = ADVISORY_LABELS[advisory.kind] ?? advisory.kind;
+    item.querySelector('[data-field="monitoredPrefix"]').textContent = advisory.monitoredPrefix;
+    item.querySelector('[data-field="roa"]').textContent = roaText;
+    item.querySelector('p').textContent =
+      `This ROA lets ${asText(roa.asn)} originate more-specifics of ${advisory.monitoredPrefix} down to /${roa.maxLength}, ` +
+      'so a forged-origin more-specific (path ending in that AS) validates as Valid (RFC 9319). ' +
+      'A minimal ROA listing only the prefixes actually announced removes this.';
+    return item;
+  };
+
+  const renderAdvisories = (advisories) => {
+    document.getElementById('advisories').replaceChildren(...advisories.map(renderAdvisory));
+    document.getElementById('no-advisories').hidden = advisories.length > 0;
   };
 
   const newestFirst = (a, b) => Date.parse(b.alert.firstSeen) - Date.parse(a.alert.firstSeen) || b.arrival - a.arrival;
@@ -148,6 +202,7 @@
     alerts.clear();
     for (const alert of [...snapshot.alerts].reverse()) upsert(alert);
     render();
+    renderAdvisories(snapshot.advisories);
   });
   events.addEventListener('alert', (event) => {
     const alert = JSON.parse(event.data);

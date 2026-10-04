@@ -9,6 +9,8 @@ import { createMonitor } from './monitor.ts';
 import { loadMonitorConfigFile } from './monitor-config-file.ts';
 import { createWebServer } from './server.ts';
 import { createSimulator } from './simulation.ts';
+import { loadVrps } from './vrp-source.ts';
+import type { LoadedVrps } from './vrp-source.ts';
 
 const PAGE_URL = new URL('../public/index.html', import.meta.url);
 
@@ -33,14 +35,32 @@ const describeError = (error: unknown): string => {
   return lines.join('\n  caused by: ');
 };
 
+const reportVrps = ({ vrps, skipped, source }: LoadedVrps): void => {
+  const count = `${String(vrps.length)} VRPs`;
+  if (source.kind === 'endpoint') {
+    console.log(`Loaded ${count} from ${source.url}`);
+    if (source.cacheWriteError !== undefined) {
+      console.warn(`Could not update the VRP cache: ${source.cacheWriteError.message}`);
+    }
+  } else {
+    console.warn(`VRP endpoint unavailable (${source.fetchProblem})`);
+    console.warn(`Loaded ${count} from the cache ${source.file}, saved ${source.cachedAt.toISOString()}`);
+  }
+  if (skipped.length > 0) {
+    console.warn(`Skipped ${String(skipped.length)} malformed VRP entries, e.g. ${skipped[0] ?? ''}`);
+  }
+};
+
 const main = async (): Promise<void> => {
   const config = readConfig();
-  const [monitoredPrefixes, page] = await Promise.all([
+  const [monitoredPrefixes, page, loaded] = await Promise.all([
     loadMonitorConfigFile(config.monitorConfigFile),
     readFile(PAGE_URL, 'utf8'),
+    loadVrps({ url: config.vrpUrl, cacheFile: config.vrpCacheFile }),
   ]);
+  reportVrps(loaded);
 
-  const monitor = createMonitor({ monitoredPrefixes });
+  const monitor = createMonitor({ monitoredPrefixes, vrps: loaded.vrps });
   const simulator = createSimulator({ monitoredPrefixes, observe: monitor.observe, now: () => new Date() });
   const server = createWebServer({ monitor, simulator, page });
 
