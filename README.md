@@ -13,7 +13,7 @@ npm start
 
 The service connects to RIPE RIS Live and subscribes to announcements of every monitored prefix and its more-specifics. The page shows the live feed status (connecting, connected, reconnecting) and how many announcements it has observed; alerts from the feed are marked LIVE. The documentation prefixes in the sample configuration never appear on the real Internet, so use a prefix that is actually announced to see the counter move.
 
-Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises.
+Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises. **Simulate: more-specific** announces the first monitored prefix plus one bit from a foreign AS, and **Simulate: forged origin + more-specific** announces the same longer prefix with the path `[foreign AS, declared origin]` (the Celer Bridge pattern); both raise an Unexpected more-specific alert.
 
 ## Configure it
 
@@ -52,7 +52,7 @@ npm test
 Layout:
 
 - `src/monitor.ts`: the Monitor, the detection core (no I/O).
-- `src/prefix.ts`: IPv4/IPv6 prefix parsing.
+- `src/prefix.ts`: IPv4/IPv6 prefix parsing and containment.
 - `src/parsers/`: boundary parsers from `unknown` input (configuration file, RIS Live frames). Real RIS Live fixtures and their sources are in `src/parsers/fixtures/ris-live/`.
 - `src/ris-live-feed.ts`: the RIS Live WebSocket client (subscribe, count, ping, reconnect with backoff).
 - `src/monitor-config-file.ts`: reads and parses the configuration file.

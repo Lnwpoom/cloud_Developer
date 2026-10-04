@@ -6,7 +6,8 @@
  *   GET  /events            SSE stream: `snapshot` once, then `alert` per change;
  *                           `feed-status` ({ status }) and `observations` ({ count })
  *                           once on connect and then as the live feed changes
- *   POST /simulate/:preset  feed one simulated announcement (204, or 404 if unknown)
+ *   POST /simulate/:preset  feed one simulated announcement (204; 404 if unknown;
+ *                           409 if it cannot be built from the first monitored prefix)
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
@@ -105,8 +106,9 @@ export const createWebServer = (options: {
         reply(response, 404, `Unknown simulation preset "${preset}"\n`);
         return;
       }
-      options.simulator.press(preset);
-      reply(response, 204);
+      const outcome = options.simulator.press(preset);
+      if (outcome.ok) reply(response, 204);
+      else reply(response, 409, `${outcome.problem}\n`);
       return;
     }
     reply(response, 404, 'Not found\n');
