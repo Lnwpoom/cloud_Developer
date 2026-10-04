@@ -125,6 +125,36 @@ describe('parseRisLiveMessage', () => {
     );
   });
 
+  it('skips only the malformed prefixes of an UPDATE, keeping every valid observation and naming what it skipped', () => {
+    const frame = update({
+      announcements: [
+        { next_hop: '192.0.2.1', prefixes: ['203.0.113.0/24', '203.0.113.7/24', 42, '198.51.100.0/24'] },
+        { next_hop: '192.0.2.1' },
+        { next_hop: '192.0.2.1', prefixes: ['2001:db8::/32'] },
+      ],
+    });
+
+    const result = parseRisLiveMessage(frame);
+
+    assert.ok(result.ok);
+    assert.deepEqual(
+      result.observations.map((observation) => observation.announcedPrefix.text),
+      ['203.0.113.0/24', '198.51.100.0/24', '2001:db8::/32'],
+    );
+    assert.deepEqual(result.skipped, [
+      'announced prefix "203.0.113.7/24" has host bits set',
+      'announced prefix is not a string',
+      'announcement group has no "prefixes" list',
+    ]);
+  });
+
+  it('reports no skipped prefixes for a well-formed UPDATE', () => {
+    const result = parseRisLiveMessage(fixture('ris-message-announce-and-withdraw-2026.json'));
+
+    assert.ok(result.ok);
+    assert.deepEqual(result.skipped, []);
+  });
+
   describe('reports malformed input as a problem instead of throwing', () => {
     const cases: Record<string, unknown> = {
       'not an object': 'hello',
@@ -138,6 +168,9 @@ describe('parseRisLiveMessage', () => {
       'a group without prefixes': update({ announcements: [{ next_hop: '192.0.2.1' }] }),
       'a prefix that is not a string': update({ announcements: [{ prefixes: [42] }] }),
       'an invalid prefix': update({ announcements: [{ prefixes: ['203.0.113.7/24'] }] }),
+      'only invalid prefixes across groups': update({
+        announcements: [{ prefixes: ['203.0.113.7/24', 42] }, { next_hop: '192.0.2.1' }],
+      }),
       'announcements without a path': update({ path: undefined }),
       'announcements with an empty path': update({ path: [] }),
       'a path element that is a string': update({ path: [13030, '2914'] }),

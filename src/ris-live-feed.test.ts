@@ -72,19 +72,20 @@ const setUp = async (timing = {}) => {
   cleanups.push(standIn.stop);
   const observed: Observation[] = [];
   const statuses: FeedStatus[] = [];
+  const logs: string[] = [];
   const feed: RisLiveFeed = startRisLiveFeed({
     url: `ws://127.0.0.1:${String(standIn.port)}/v1/ws/`,
     client: 'test-client',
     monitoredPrefixes: MONITORED,
     observe: (observation) => observed.push(observation),
-    log: () => undefined,
+    log: (message) => logs.push(message),
     timing: { initialBackoffMs: 20, maxBackoffMs: 100, ...timing },
   });
   cleanups.push(feed.stop);
   feed.onChange((change) => {
     if (change.type === 'feed-status') statuses.push(change.status);
   });
-  return { standIn, feed, observed, statuses };
+  return { standIn, feed, observed, statuses, logs };
 };
 
 describe('RIS Live feed', () => {
@@ -126,6 +127,22 @@ describe('RIS Live feed', () => {
     );
     assert.deepEqual(counts, [1, 2]);
     assert.deepEqual(feed.state(), { status: 'connected', observations: 2 });
+  });
+
+  it('keeps the valid observations of an UPDATE with a malformed prefix and logs the prefix it skipped', async () => {
+    const { standIn, feed, observed, logs } = await setUp();
+    await waitFor('connected', () => feed.state().status === 'connected');
+    const mixed = JSON.parse(UPDATE) as { data: Record<string, unknown> };
+    mixed.data['announcements'] = [{ next_hop: '2001:db8::1', prefixes: ['2806:320:340::/42', '2806:320:340::1/42'] }];
+
+    standIn.connections[0]?.socket.send(JSON.stringify(mixed));
+    await waitFor('an observation', () => observed.length === 1);
+
+    assert.deepEqual(
+      observed.map((observation) => observation.announcedPrefix.text),
+      ['2806:320:340::/42'],
+    );
+    assert.deepEqual(logs, ['RIS Live: skipped part of a frame: announced prefix "2806:320:340::1/42" has host bits set']);
   });
 
   it('after the connection drops, reports reconnecting, reconnects, re-subscribes and resumes observing', async () => {

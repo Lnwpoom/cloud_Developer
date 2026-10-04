@@ -96,6 +96,7 @@ export const startRisLiveFeed = (options: {
       options.log(`RIS Live: skipped a frame: ${parsed.problem}`);
       return;
     }
+    for (const problem of parsed.skipped) options.log(`RIS Live: skipped part of a frame: ${problem}`);
     for (const observation of parsed.observations) {
       options.observe(observation);
       observations += 1;
