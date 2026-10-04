@@ -3,26 +3,16 @@
  * Monitor to the simulator, the RIS Live feed and the web server, and listen.
  */
 import { readFile } from 'node:fs/promises';
-import type { Server } from 'node:http';
 import { readConfig } from './config.ts';
 import { createMonitor } from './monitor.ts';
 import { loadMonitorConfigFile } from './monitor-config-file.ts';
-import { createWebServer } from './server.ts';
+import { createWebServer, listen } from './server.ts';
 import { createSimulator } from './simulation.ts';
 import { startRisLiveFeed } from './ris-live-feed.ts';
 import { loadVrps } from './vrp-source.ts';
 import type { LoadedVrps } from './vrp-source.ts';
 
 const PAGE_URL = new URL('../public/index.html', import.meta.url);
-
-const listen = (server: Server, port: number): Promise<void> =>
-  new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, () => {
-      server.off('error', reject);
-      resolve();
-    });
-  });
 
 /** The error message followed by each `cause` in turn, unless already quoted above it. */
 const describeError = (error: unknown): string => {
@@ -76,9 +66,9 @@ const main = async (): Promise<void> => {
 
   try {
     await listen(server, config.port);
-  } catch (cause) {
+  } catch (error) {
     feed.stop();
-    throw new Error(`Cannot listen on port ${String(config.port)}`, { cause });
+    throw error;
   }
   const watched = monitoredPrefixes
     .map((monitored) => `${monitored.prefix.text} (AS${String(monitored.declaredOrigin)})`)

@@ -50,6 +50,11 @@ const PRESETS = {
 
 export type SimulationPreset = keyof typeof PRESETS;
 
+/** The simulator cannot be built from the configuration it was given. */
+export class SimulatorSetupError extends Error {
+  override readonly name = 'SimulatorSetupError';
+}
+
 export const isSimulationPreset = (name: string): name is SimulationPreset => Object.hasOwn(PRESETS, name);
 
 export type PressOutcome = { readonly ok: true } | { readonly ok: false; readonly problem: string };
@@ -69,7 +74,7 @@ export const createSimulator = (options: {
   readonly now: () => Date;
 }): Simulator => {
   const [target] = options.monitoredPrefixes;
-  if (target === undefined) throw new Error('The simulator needs at least one monitored prefix');
+  if (target === undefined) throw new SimulatorSetupError('The simulator needs at least one monitored prefix');
   const foreignAs = target.declaredOrigin === FOREIGN_AS ? FOREIGN_AS + 1 : FOREIGN_AS;
   const context: PresetContext = { target, monitoredPrefixes: options.monitoredPrefixes, foreignAs };
   let presses = 0;

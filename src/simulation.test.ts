@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createMonitor } from './monitor.ts';
 import type { Alert, MonitoredPrefix, Origin } from './monitor.ts';
 import { parsePrefix } from './prefix.ts';
-import { createSimulator, isSimulationPreset } from './simulation.ts';
+import { createSimulator, isSimulationPreset, SimulatorSetupError } from './simulation.ts';
 
 const monitored = (text: string, declaredOrigin: number): MonitoredPrefix => {
   const parsed = parsePrefix(text);
@@ -171,6 +171,18 @@ describe('Simulator', () => {
       assert.deepEqual(monitor.alerts(), []);
       assert.deepEqual(simulator.press('origin-mismatch'), { ok: true });
     }
+  });
+
+  it('refuses to start without a monitored prefix, with a SimulatorSetupError', () => {
+    assert.throws(
+      () => createSimulator({ monitoredPrefixes: [], observe: () => undefined, now: () => new Date() }),
+      (error: unknown) => {
+        assert.ok(error instanceof SimulatorSetupError);
+        assert.equal(error.name, 'SimulatorSetupError');
+        assert.match(error.message, /at least one monitored prefix/);
+        return true;
+      },
+    );
   });
 
   it('recognises only the known preset names', () => {

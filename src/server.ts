@@ -26,6 +26,24 @@ export type Snapshot = {
   readonly advisories: readonly Advisory[];
 };
 
+/** The web server cannot listen on its port (taken, or not allowed). */
+export class ListenError extends Error {
+  override readonly name = 'ListenError';
+}
+
+/** Starts `server` listening on `port`; rejects with a ListenError carrying the socket error as `cause`. */
+export const listen = (server: Server, port: number, host?: string): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const fail = (cause: Error): void => {
+      reject(new ListenError(`Cannot listen on port ${String(port)}`, { cause }));
+    };
+    server.once('error', fail);
+    server.listen(port, host, () => {
+      server.off('error', fail);
+      resolve();
+    });
+  });
+
 const HEARTBEAT_MS = 15_000;
 /** The observation counter is pushed at most this often; a busy feed sees many per second. */
 const OBSERVATIONS_PUSH_MS = 250;
