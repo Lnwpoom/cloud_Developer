@@ -46,6 +46,18 @@ _Avoid_: Hijack, incident, alarm
 The technical fact an alert reports (e.g. origin does not match, more-specific announced).
 _Avoid_: Alert type, severity
 
+**Origin mismatch**:
+An alert kind: a monitored prefix is announced with an origin AS other than its declared origin.
+_Avoid_: Origin hijack, wrong AS
+
+**Unexpected more-specific**:
+An alert kind: a prefix strictly inside a monitored prefix is announced, and that prefix is not itself a monitored prefix — whatever its origin AS.
+_Avoid_: Sub-prefix hijack, more-specific hijack
+
+**Loose ROA**:
+An alert kind: a ROA covering a monitored prefix allows a maxLength longer than the prefix itself, which lets a forged-origin more-specific validate as Valid.
+_Avoid_: maxLength warning, ROA misconfiguration
+
 **Hijack**:
 A human judgement that an alert was a malicious or unauthorised announcement; the monitor never assigns it.
 _Avoid_: Using it for any alert the monitor raises
