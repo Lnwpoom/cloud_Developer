@@ -1,0 +1,23 @@
+{
+  "name": "bgp-hijack-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Watches BGP announcements for an operator's monitored prefixes and raises alerts against the declared origin.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --test \"src/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.12.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}
