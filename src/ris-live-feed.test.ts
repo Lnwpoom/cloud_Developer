@@ -184,4 +184,31 @@ describe('RIS Live feed', () => {
     assert.equal(standIn.connections.length, 1);
     assert.deepEqual(statuses, ['connected']);
   });
+
+  it('reports connecting, not reconnecting, until the first connection succeeds', async () => {
+    const standIn = await startStandIn();
+    const { port } = standIn;
+    await standIn.stop();
+    const statuses: FeedStatus[] = [];
+    const feed = startRisLiveFeed({
+      url: `ws://127.0.0.1:${String(port)}/v1/ws/`,
+      client: 'test-client',
+      monitoredPrefixes: MONITORED,
+      observe: () => undefined,
+      log: () => undefined,
+      timing: { initialBackoffMs: 20, maxBackoffMs: 40 },
+    });
+    cleanups.push(feed.stop);
+    feed.onChange((change) => {
+      if (change.type === 'feed-status') statuses.push(change.status);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.equal(feed.state().status, 'connecting');
+
+    const restarted = await startStandIn(port);
+    cleanups.push(restarted.stop);
+    await waitFor('connected', () => feed.state().status === 'connected');
+
+    assert.deepEqual(statuses, ['connected']);
+  });
 });

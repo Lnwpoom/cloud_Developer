@@ -108,7 +108,7 @@ export const startRisLiveFeed = (options: {
     socket = undefined;
     clearInterval(watchdog);
     if (stopped) return;
-    setStatus('reconnecting');
+    if (status === 'connected') setStatus('reconnecting');
     retry = setTimeout(connect, backoffMs);
     backoffMs = Math.min(backoffMs * 2, timing.maxBackoffMs);
   };

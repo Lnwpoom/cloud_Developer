@@ -1,6 +1,6 @@
 /**
  * Entry point: parse the environment and configuration file, wire the
- * Monitor to the simulator and the web server, and listen.
+ * Monitor to the simulator, the RIS Live feed and the web server, and listen.
  */
 import { readFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
@@ -9,6 +9,7 @@ import { createMonitor } from './monitor.ts';
 import { loadMonitorConfigFile } from './monitor-config-file.ts';
 import { createWebServer } from './server.ts';
 import { createSimulator } from './simulation.ts';
+import { startRisLiveFeed } from './ris-live-feed.ts';
 
 const PAGE_URL = new URL('../public/index.html', import.meta.url);
 
@@ -42,17 +43,27 @@ const main = async (): Promise<void> => {
 
   const monitor = createMonitor({ monitoredPrefixes });
   const simulator = createSimulator({ monitoredPrefixes, observe: monitor.observe, now: () => new Date() });
-  const server = createWebServer({ monitor, simulator, page });
+  const feed = startRisLiveFeed({
+    url: config.risLiveUrl,
+    client: config.risLiveClient,
+    monitoredPrefixes,
+    observe: monitor.observe,
+    log: (message) => {
+      console.warn(message);
+    },
+  });
+  const server = createWebServer({ monitor, simulator, feed, page });
 
   try {
     await listen(server, config.port);
   } catch (cause) {
+    feed.stop();
     throw new Error(`Cannot listen on port ${String(config.port)}`, { cause });
   }
   const watched = monitoredPrefixes
     .map((monitored) => `${monitored.prefix.text} (AS${String(monitored.declaredOrigin)})`)
     .join(', ');
-  console.log(`BGP Hijack Monitor watching ${watched}`);
+  console.log(`BGP Hijack Monitor watching ${watched} on ${config.risLiveUrl}`);
   console.log(`Open http://localhost:${String(config.port)}/`);
 };
 

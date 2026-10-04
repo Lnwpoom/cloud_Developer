@@ -25,6 +25,11 @@
   .status { color: var(--muted); font-size: 13px; }
   .status[data-state="open"]::before { content: "\25CF "; color: var(--ok); }
   .status[data-state="closed"]::before { content: "\25CF "; color: var(--accent); }
+  .feed { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 14px; }
+  .feed strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  #feed-status::before { content: "\25CF "; color: var(--muted); }
+  #feed-status[data-status="connected"]::before { color: var(--ok); }
+  #feed-status[data-status="reconnecting"]::before { color: var(--accent); }
   .controls { display: flex; flex-wrap: wrap; gap: 8px; }
   button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
     background: var(--panel); color: var(--text); cursor: pointer; }
@@ -53,6 +58,10 @@
     <h1>BGP Hijack Monitor</h1>
     <span id="connection" class="status" data-state="connecting">Connecting to the monitor&hellip;</span>
   </header>
+  <p class="feed">
+    <span>Live feed (RIS Live): <strong id="feed-status" data-status="connecting">connecting</strong></span>
+    <span><strong id="observation-count">0</strong> announcements observed</span>
+  </p>
 
   <h2>Simulation</h2>
   <div class="controls">
@@ -153,6 +162,17 @@
     const alert = JSON.parse(event.data);
     upsert(alert);
     render(alert.id);
+  });
+
+  events.addEventListener('feed-status', (event) => {
+    const { status } = JSON.parse(event.data);
+    const element = document.getElementById('feed-status');
+    element.dataset.status = status;
+    element.textContent = status;
+  });
+  events.addEventListener('observations', (event) => {
+    const { count } = JSON.parse(event.data);
+    document.getElementById('observation-count').textContent = count.toLocaleString();
   });
 
   for (const button of document.querySelectorAll('button[data-preset]')) {
