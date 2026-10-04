@@ -57,6 +57,8 @@
   <h2>Simulation</h2>
   <div class="controls">
     <button type="button" data-preset="origin-mismatch">Simulate: Origin mismatch</button>
+    <button type="button" data-preset="more-specific">Simulate: more-specific</button>
+    <button type="button" data-preset="forged-origin-more-specific">Simulate: forged origin + more-specific</button>
   </div>
 
   <h2>Alerts</h2>
@@ -83,7 +85,10 @@
 </template>
 
 <script>
-  const KIND_LABELS = { 'origin-mismatch': 'Origin mismatch' };
+  const KIND_LABELS = {
+    'origin-mismatch': 'Origin mismatch',
+    'unexpected-more-specific': 'Unexpected more-specific',
+  };
   const alerts = new Map();
   let arrivals = 0;
 

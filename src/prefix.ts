@@ -100,3 +100,25 @@ export const parsePrefix = (text: string): PrefixParseResult => {
 
 export const samePrefix = (a: Prefix, b: Prefix): boolean =>
   a.family === b.family && a.length === b.length && a.network === b.network;
+
+/** True when `inner` equals `outer` or lies strictly inside it (same family, no shorter, same network bits). */
+export const containsPrefix = (outer: Prefix, inner: Prefix): boolean => {
+  if (outer.family !== inner.family || inner.length < outer.length) return false;
+  const bits = FAMILIES[outer.family].bits;
+  const hostBits = BigInt(bits - outer.length);
+  return inner.network >> hostBits === outer.network >> hostBits;
+};
+
+/** The two prefixes one bit longer than `prefix` (lower half first), or undefined for a host prefix. */
+export const halvesOf = (prefix: Prefix): readonly [Prefix, Prefix] | undefined => {
+  const { bits, format } = FAMILIES[prefix.family];
+  if (prefix.length === bits) return undefined;
+  const length = prefix.length + 1;
+  const half = (network: bigint): Prefix => ({
+    family: prefix.family,
+    network,
+    length,
+    text: `${format(network)}/${String(length)}`,
+  });
+  return [half(prefix.network), half(prefix.network | (1n << BigInt(bits - length)))];
+};

@@ -11,7 +11,7 @@ npm install
 npm start
 ```
 
-Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises.
+Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises. **Simulate: more-specific** announces the first monitored prefix plus one bit from a foreign AS, and **Simulate: forged origin + more-specific** announces the same longer prefix with the path `[foreign AS, declared origin]` (the Celer Bridge pattern); both raise an Unexpected more-specific alert.
 
 ## Configure it
 
@@ -48,7 +48,7 @@ npm test
 Layout:
 
 - `src/monitor.ts`: the Monitor, the detection core (no I/O).
-- `src/prefix.ts`: IPv4/IPv6 prefix parsing.
+- `src/prefix.ts`: IPv4/IPv6 prefix parsing and containment.
 - `src/parsers/`: boundary parsers from `unknown` input (configuration file).
 - `src/monitor-config-file.ts`: reads and parses the configuration file.
 - `src/config.ts`: the only reader of `process.env`.
