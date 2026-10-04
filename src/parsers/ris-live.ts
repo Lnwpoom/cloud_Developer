@@ -77,7 +77,7 @@ const parseUpdate = (data: Record<string, unknown>): RisLiveParseResult => {
   return { ok: true, value: { observations, skipped } };
 };
 
-export const parseRisLiveFrame = (input: unknown): RisLiveParseResult => {
+export const parseRisLiveFrame = (input: unknown): ParseResult<ParsedRisLiveFrame> => {
   if (!isRecord(input) || typeof input['type'] !== 'string') return fail('expected an object with a "type"');
   const { type, data } = input;
   if (type === 'ris_error') {

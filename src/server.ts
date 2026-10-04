@@ -19,8 +19,8 @@ import type { RisLiveFeed } from './ris-live-feed.ts';
 
 type Feed = Pick<RisLiveFeed, 'state' | 'onChange'>;
 
-/** Sent once when a page connects; later tickets add fields beside `alerts`. */
-export type Snapshot = {
+/** Sent once when a page connects. */
+type Snapshot = {
   readonly alerts: readonly Alert[];
   /** Fixed at startup, so they are sent only here. */
   readonly advisories: readonly Advisory[];
