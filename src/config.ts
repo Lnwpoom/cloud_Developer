@@ -44,43 +44,36 @@ const parsePort = (value: string | undefined): number => {
   return port;
 };
 
-const parseFilePath = (name: string, value: string | undefined, fallback: string): string => {
+/** A variable that, when set, must not be blank (a file path or an identifier). */
+const parseNonEmpty = (name: string, value: string | undefined, fallback: string): string => {
   if (value === undefined) return fallback;
   if (value.trim() === '') throw new ConfigError(`${name} must not be empty`);
   return value;
 };
 
-const parseHttpUrl = (name: string, value: string | undefined, fallback: string): string => {
+/** A variable that, when set, must be a URL with one of `protocols` (e.g. `'https:'`). */
+const parseUrl = (
+  name: string,
+  value: string | undefined,
+  fallback: string,
+  protocols: readonly string[],
+): string => {
   if (value === undefined) return fallback;
   const url = URL.parse(value);
-  if (url === null || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
-    throw new ConfigError(`${name} must be an http or https URL, got "${value}"`);
+  if (url === null || !protocols.includes(url.protocol)) {
+    const allowed = protocols.map((protocol) => `${protocol}//`).join(' or ');
+    throw new ConfigError(`${name} must be a URL starting with ${allowed}, got "${value}"`);
   }
   return url.href;
 };
 
-const parseRisLiveUrl = (value: string | undefined): string => {
-  if (value === undefined) return DEFAULTS.risLiveUrl;
-  const url = URL.canParse(value) ? new URL(value) : undefined;
-  if (url === undefined || (url.protocol !== 'ws:' && url.protocol !== 'wss:')) {
-    throw new ConfigError(`RIS_LIVE_URL must be a ws:// or wss:// URL, got "${value}"`);
-  }
-  return value;
-};
-
-const parseRisLiveClient = (value: string | undefined): string => {
-  if (value === undefined) return DEFAULTS.risLiveClient;
-  if (value.trim() === '') throw new ConfigError('RIS_LIVE_CLIENT must not be empty');
-  return value;
-};
-
 export const parseConfig = (env: Environment): Config => ({
   port: parsePort(env['PORT']),
-  monitorConfigFile: parseFilePath('MONITOR_CONFIG_FILE', env['MONITOR_CONFIG_FILE'], DEFAULTS.monitorConfigFile),
-  vrpUrl: parseHttpUrl('VRP_URL', env['VRP_URL'], DEFAULTS.vrpUrl),
-  vrpCacheFile: parseFilePath('VRP_CACHE_FILE', env['VRP_CACHE_FILE'], DEFAULTS.vrpCacheFile),
-  risLiveUrl: parseRisLiveUrl(env['RIS_LIVE_URL']),
-  risLiveClient: parseRisLiveClient(env['RIS_LIVE_CLIENT']),
+  monitorConfigFile: parseNonEmpty('MONITOR_CONFIG_FILE', env['MONITOR_CONFIG_FILE'], DEFAULTS.monitorConfigFile),
+  vrpUrl: parseUrl('VRP_URL', env['VRP_URL'], DEFAULTS.vrpUrl, ['http:', 'https:']),
+  vrpCacheFile: parseNonEmpty('VRP_CACHE_FILE', env['VRP_CACHE_FILE'], DEFAULTS.vrpCacheFile),
+  risLiveUrl: parseUrl('RIS_LIVE_URL', env['RIS_LIVE_URL'], DEFAULTS.risLiveUrl, ['ws:', 'wss:']),
+  risLiveClient: parseNonEmpty('RIS_LIVE_CLIENT', env['RIS_LIVE_CLIENT'], DEFAULTS.risLiveClient),
 });
 
 export const readConfig = (): Config => parseConfig(process.env);
