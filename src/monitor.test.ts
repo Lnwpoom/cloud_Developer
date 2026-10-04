@@ -9,7 +9,7 @@ import type { Prefix } from './prefix.ts';
 const prefix = (text: string): Prefix => {
   const parsed = parsePrefix(text);
   if (!parsed.ok) throw new Error(`bad test prefix ${text}: ${parsed.problem}`);
-  return parsed.prefix;
+  return parsed.value;
 };
 
 const monitoredPrefixes = [{ prefix: prefix('203.0.113.0/24'), declaredOrigin: 64500 }];

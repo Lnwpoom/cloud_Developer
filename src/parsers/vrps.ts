@@ -13,18 +13,12 @@
  */
 import { parsePrefix } from '../prefix.ts';
 import type { Vrp } from '../rpki.ts';
+import { fail, isRecord, MAX_ASN } from './parse.ts';
+import type { ParseResult } from './parse.ts';
 
-export type VrpParseResult =
-  | { readonly ok: true; readonly vrps: readonly Vrp[]; readonly skipped: readonly string[] }
-  | { readonly ok: false; readonly problem: string };
+export type ParsedVrps = { readonly vrps: readonly Vrp[]; readonly skipped: readonly string[] };
 
-const MAX_ASN = 4_294_967_295;
 const ADDRESS_BITS = { 4: 32, 6: 128 } as const;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const fail = (problem: string): VrpParseResult => ({ ok: false, problem });
 
 /** A whole number written as a JSON number or as a string of digits. */
 const parseWholeNumber = (value: unknown): number | undefined => {
@@ -46,7 +40,7 @@ const parseEntry = (entry: unknown, path: string): Vrp | string => {
   if (typeof prefixText !== 'string') return `${path}.prefix must be a string`;
   const parsed = parsePrefix(prefixText);
   if (!parsed.ok) return `${path}.prefix: ${parsed.problem}`;
-  const { prefix } = parsed;
+  const prefix = parsed.value;
 
   const maxLength = parseWholeNumber(entry['maxLength']);
   const bits = ADDRESS_BITS[prefix.family];
@@ -68,7 +62,7 @@ const roasOf = (input: unknown): readonly unknown[] | undefined => {
   return isRecord(data) && isList(data['roas']) ? data['roas'] : undefined;
 };
 
-export const parseVrps = (input: unknown): VrpParseResult => {
+export const parseVrps = (input: unknown): ParseResult<ParsedVrps> => {
   const entries = roasOf(input);
   if (entries === undefined) return fail('expected an object with a "roas" list, at the top level or under "data"');
 
@@ -83,5 +77,5 @@ export const parseVrps = (input: unknown): VrpParseResult => {
     const reason = entries.length === 0 ? 'the "roas" list is empty' : `every entry is malformed (${skipped[0] ?? ''})`;
     return fail(`no usable VRPs: ${reason}`);
   }
-  return { ok: true, vrps, skipped };
+  return { ok: true, value: { vrps, skipped } };
 };

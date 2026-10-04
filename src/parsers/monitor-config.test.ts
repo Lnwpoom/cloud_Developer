@@ -5,7 +5,7 @@ import { parseMonitorConfig } from './monitor-config.ts';
 const monitoredPrefixTexts = (input: unknown): unknown => {
   const result = parseMonitorConfig(input);
   return result.ok
-    ? result.monitoredPrefixes.map((monitored) => [monitored.prefix.text, monitored.declaredOrigin])
+    ? result.value.map((monitored) => [monitored.prefix.text, monitored.declaredOrigin])
     : result.problem;
 };
 

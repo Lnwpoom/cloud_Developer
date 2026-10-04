@@ -5,6 +5,7 @@
  */
 import { readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { parseVrps } from './parsers/vrps.ts';
+import type { ParsedVrps } from './parsers/vrps.ts';
 import type { Vrp } from './rpki.ts';
 
 export type VrpSource =
@@ -32,7 +33,7 @@ const reasonOf = (error: Error): string => {
   return inner === '' || error.message.includes(inner) ? error.message : `${error.message}: ${inner}`;
 };
 
-const parseText = (text: string, where: string): { vrps: readonly Vrp[]; skipped: readonly string[] } => {
+const parseText = (text: string, where: string): ParsedVrps => {
   let contents: unknown;
   try {
     contents = JSON.parse(text);
@@ -41,7 +42,7 @@ const parseText = (text: string, where: string): { vrps: readonly Vrp[]; skipped
   }
   const parsed = parseVrps(contents);
   if (!parsed.ok) throw new VrpLoadError(`${where} is not VRP JSON: ${parsed.problem}`);
-  return parsed;
+  return parsed.value;
 };
 
 const fetchText = async (url: string): Promise<string> => {

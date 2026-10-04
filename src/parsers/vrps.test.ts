@@ -17,7 +17,7 @@ type VrpRow = readonly [prefix: string, maxLength: number, asn: number];
 const rowsOf = (input: unknown): readonly VrpRow[] => {
   const result = parseVrps(input);
   if (!result.ok) assert.fail(`expected the VRPs to parse, got: ${result.problem}`);
-  return result.vrps.map((vrp) => [vrp.prefix.text, vrp.maxLength, vrp.asn] as const);
+  return result.value.vrps.map((vrp) => [vrp.prefix.text, vrp.maxLength, vrp.asn] as const);
 };
 
 describe('parseVrps', () => {
@@ -77,7 +77,7 @@ describe('parseVrps', () => {
 
     assert.ok(result.ok);
     assert.deepEqual(
-      result.vrps.map((vrp) => [vrp.prefix.text, vrp.maxLength, vrp.asn]),
+      result.value.vrps.map((vrp) => [vrp.prefix.text, vrp.maxLength, vrp.asn]),
       [
         ['1.0.0.0/24', 24, 13335],
         ['1.0.4.0/24', 24, 38803],
@@ -87,11 +87,11 @@ describe('parseVrps', () => {
         ['73.0.0.0/8', 9, 7922],
       ],
     );
-    assert.equal(result.skipped.length, 4);
-    assert.match(result.skipped[0] ?? '', /roas\[3\].*1\.0\.4\.0\/21.*host bits/);
-    assert.match(result.skipped[1] ?? '', /roas\[4\].*maxLength/);
-    assert.match(result.skipped[2] ?? '', /roas\[5\].*maxLength/);
-    assert.match(result.skipped[3] ?? '', /roas\[6\].*maxLength/);
+    assert.equal(result.value.skipped.length, 4);
+    assert.match(result.value.skipped[0] ?? '', /roas\[3\].*1\.0\.4\.0\/21.*host bits/);
+    assert.match(result.value.skipped[1] ?? '', /roas\[4\].*maxLength/);
+    assert.match(result.value.skipped[2] ?? '', /roas\[5\].*maxLength/);
+    assert.match(result.value.skipped[3] ?? '', /roas\[6\].*maxLength/);
   });
 
   it('skips entries with a missing or malformed prefix, maxLength or asn', () => {
@@ -113,11 +113,11 @@ describe('parseVrps', () => {
 
     assert.ok(result.ok);
     assert.deepEqual(
-      result.vrps.map((vrp) => [vrp.prefix.text, vrp.maxLength, vrp.asn]),
+      result.value.vrps.map((vrp) => [vrp.prefix.text, vrp.maxLength, vrp.asn]),
       [['203.0.113.0/24', 24, 64500]],
     );
     assert.deepEqual(
-      result.skipped.map((problem) => /roas\[(\d+)\]/.exec(problem)?.[1]),
+      result.value.skipped.map((problem) => /roas\[(\d+)\]/.exec(problem)?.[1]),
       ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
     );
   });

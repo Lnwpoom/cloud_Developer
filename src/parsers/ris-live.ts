@@ -9,20 +9,17 @@
  */
 import type { AsPath, AsPathSegment, Observation } from '../domain.ts';
 import { parsePrefix } from '../prefix.ts';
+import { fail, isRecord, MAX_ASN } from './parse.ts';
+import type { ParseResult } from './parse.ts';
 
-export type RisLiveParseResult =
-  | { readonly ok: true; readonly observations: readonly Observation[]; readonly skipped: readonly string[] }
-  | { readonly ok: false; readonly problem: string };
+export type RisLiveFrame = { readonly observations: readonly Observation[]; readonly skipped: readonly string[] };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+type RisLiveParseResult = ParseResult<RisLiveFrame>;
 
-const fail = (problem: string): RisLiveParseResult => ({ ok: false, problem });
-
-const NONE: RisLiveParseResult = { ok: true, observations: [], skipped: [] };
+const NONE: RisLiveParseResult = { ok: true, value: { observations: [], skipped: [] } };
 
 const parseAsn = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 4_294_967_295 ? value : undefined;
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_ASN ? value : undefined;
 
 const parseSegment = (value: unknown): AsPathSegment | undefined => {
   if (!Array.isArray(value)) return parseAsn(value);
@@ -71,13 +68,13 @@ const parseUpdate = (data: Record<string, unknown>): RisLiveParseResult => {
         skipped.push(`announced prefix ${parsed.problem}`);
         continue;
       }
-      if (seen.has(parsed.prefix.text)) continue;
-      seen.add(parsed.prefix.text);
-      observations.push({ announcedPrefix: parsed.prefix, asPath: path, peer, source: 'live', seenAt });
+      if (seen.has(parsed.value.text)) continue;
+      seen.add(parsed.value.text);
+      observations.push({ announcedPrefix: parsed.value, asPath: path, peer, source: 'live', seenAt });
     }
   }
   if (observations.length === 0 && skipped.length > 0) return fail(skipped.join('; '));
-  return { ok: true, observations, skipped };
+  return { ok: true, value: { observations, skipped } };
 };
 
 export const parseRisLiveMessage = (input: unknown): RisLiveParseResult => {

@@ -6,17 +6,8 @@
  */
 import type { MonitoredPrefix } from '../domain.ts';
 import { parsePrefix } from '../prefix.ts';
-
-export type MonitorConfigParseResult =
-  | { readonly ok: true; readonly monitoredPrefixes: readonly MonitoredPrefix[] }
-  | { readonly ok: false; readonly problem: string };
-
-const MAX_ASN = 4_294_967_295;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const fail = (problem: string): MonitorConfigParseResult => ({ ok: false, problem });
+import { fail, isRecord, MAX_ASN } from './parse.ts';
+import type { ParseResult } from './parse.ts';
 
 const parseEntry = (entry: unknown, path: string): MonitoredPrefix | string => {
   if (!isRecord(entry)) return `${path} must be an object with "prefix" and "declaredOrigin"`;
@@ -34,10 +25,10 @@ const parseEntry = (entry: unknown, path: string): MonitoredPrefix | string => {
   ) {
     return `${path}.declaredOrigin must be an AS number from 1 to ${String(MAX_ASN)}`;
   }
-  return { prefix: prefix.prefix, declaredOrigin };
+  return { prefix: prefix.value, declaredOrigin };
 };
 
-export const parseMonitorConfig = (input: unknown): MonitorConfigParseResult => {
+export const parseMonitorConfig = (input: unknown): ParseResult<readonly MonitoredPrefix[]> => {
   if (!isRecord(input) || !Array.isArray(input['monitoredPrefixes'])) {
     return fail('expected an object with a "monitoredPrefixes" list');
   }
@@ -55,5 +46,5 @@ export const parseMonitorConfig = (input: unknown): MonitorConfigParseResult => 
     seen.add(parsed.prefix.text);
     monitoredPrefixes.push(parsed);
   }
-  return { ok: true, monitoredPrefixes };
+  return { ok: true, value: monitoredPrefixes };
 };

@@ -27,5 +27,5 @@ export const loadMonitorConfigFile = async (path: string): Promise<readonly Moni
 
   const parsed = parseMonitorConfig(contents);
   if (!parsed.ok) throw new MonitorConfigFileError(`Configuration file ${path} is invalid: ${parsed.problem}`);
-  return parsed.monitoredPrefixes;
+  return parsed.value;
 };

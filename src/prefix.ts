@@ -2,6 +2,9 @@
  * IP prefixes (IPv4 and IPv6) as validated values. Build them only with
  * `parsePrefix`; everything inside the boundary can then trust them.
  */
+import { fail } from './parsers/parse.ts';
+import type { ParseResult } from './parsers/parse.ts';
+
 export type Prefix = {
   readonly family: 4 | 6;
   /** Network address as an unsigned integer, host bits always zero. */
@@ -10,12 +13,6 @@ export type Prefix = {
   /** Canonical text form, e.g. `203.0.113.0/24` or `2001:db8::/32`. */
   readonly text: string;
 };
-
-export type PrefixParseResult =
-  | { readonly ok: true; readonly prefix: Prefix }
-  | { readonly ok: false; readonly problem: string };
-
-const fail = (problem: string): PrefixParseResult => ({ ok: false, problem });
 
 const parseIpv4 = (text: string): bigint | undefined => {
   const parts = text.split('.');
@@ -77,7 +74,7 @@ const FAMILIES = {
   6: { bits: 128, parse: parseIpv6, format: formatIpv6 },
 } as const;
 
-export const parsePrefix = (text: string): PrefixParseResult => {
+export const parsePrefix = (text: string): ParseResult<Prefix> => {
   const slash = text.indexOf('/');
   if (slash === -1) return fail(`"${text}" is not a prefix (expected address/length)`);
   const addressText = text.slice(0, slash);
@@ -94,7 +91,7 @@ export const parsePrefix = (text: string): PrefixParseResult => {
   if ((address & hostMask) !== 0n) return fail(`"${text}" has host bits set`);
   return {
     ok: true,
-    prefix: { family, network: address, length, text: `${format(address)}/${String(length)}` },
+    value: { family, network: address, length, text: `${format(address)}/${String(length)}` },
   };
 };
 

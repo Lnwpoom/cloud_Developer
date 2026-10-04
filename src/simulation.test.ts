@@ -9,7 +9,7 @@ import { createSimulator, isSimulationPreset, SimulatorSetupError } from './simu
 const monitored = (text: string, declaredOrigin: number): MonitoredPrefix => {
   const parsed = parsePrefix(text);
   if (!parsed.ok) throw new Error(parsed.problem);
-  return { prefix: parsed.prefix, declaredOrigin };
+  return { prefix: parsed.value, declaredOrigin };
 };
 
 const isPrivateUseAsn = (origin: Origin): boolean =>

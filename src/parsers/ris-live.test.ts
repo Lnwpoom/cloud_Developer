@@ -20,7 +20,7 @@ const update = (overrides: Record<string, unknown>): unknown => {
 const observationsOf = (input: unknown) => {
   const result = parseRisLiveMessage(input);
   if (!result.ok) assert.fail(`expected observations, got problem: ${result.problem}`);
-  return result.observations.map((observation) => ({ ...observation, announcedPrefix: observation.announcedPrefix.text }));
+  return result.value.observations.map((observation) => ({ ...observation, announcedPrefix: observation.announcedPrefix.text }));
 };
 
 describe('parseRisLiveMessage', () => {
@@ -138,10 +138,10 @@ describe('parseRisLiveMessage', () => {
 
     assert.ok(result.ok);
     assert.deepEqual(
-      result.observations.map((observation) => observation.announcedPrefix.text),
+      result.value.observations.map((observation) => observation.announcedPrefix.text),
       ['203.0.113.0/24', '198.51.100.0/24', '2001:db8::/32'],
     );
-    assert.deepEqual(result.skipped, [
+    assert.deepEqual(result.value.skipped, [
       'announced prefix "203.0.113.7/24" has host bits set',
       'announced prefix is not a string',
       'announcement group has no "prefixes" list',
@@ -152,7 +152,7 @@ describe('parseRisLiveMessage', () => {
     const result = parseRisLiveMessage(fixture('ris-message-announce-and-withdraw-2026.json'));
 
     assert.ok(result.ok);
-    assert.deepEqual(result.skipped, []);
+    assert.deepEqual(result.value.skipped, []);
   });
 
   describe('reports malformed input as a problem instead of throwing', () => {
