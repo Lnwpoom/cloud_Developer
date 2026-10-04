@@ -11,24 +11,24 @@ import type { Prefix } from './prefix.ts';
 export type Vrp = {
   readonly prefix: Prefix;
   readonly maxLength: number;
-  /** 0 for an AS0 VRP, which never makes a route Valid. */
+  /** 0 for an AS0 VRP, which never makes an announcement Valid. */
   readonly asn: number;
 };
 
 export type ValidationState = 'Valid' | 'Invalid' | 'NotFound';
 
 /**
- * The RFC 6811 validation state of a route with `routePrefix` and `origin`:
- * NotFound when no VRP covers the route, Valid when a covering VRP matches
- * its origin AS and length, Invalid otherwise. Origin NONE (an AS_SET) and
+ * The RFC 6811 validation state of an announcement of `announcedPrefix` from
+ * `origin`: NotFound when no VRP covers the announced prefix, Valid when a
+ * covering VRP matches its origin AS and length, Invalid otherwise. Origin NONE (an AS_SET) and
  * AS0 VRPs never match.
  */
-export const validationState = (vrps: readonly Vrp[], routePrefix: Prefix, origin: Origin): ValidationState => {
-  const covering = vrps.filter((vrp) => containsPrefix(vrp.prefix, routePrefix));
+export const validationState = (vrps: readonly Vrp[], announcedPrefix: Prefix, origin: Origin): ValidationState => {
+  const covering = vrps.filter((vrp) => containsPrefix(vrp.prefix, announcedPrefix));
   if (covering.length === 0) return 'NotFound';
   const matched = covering.some(
     (vrp) =>
-      routePrefix.length <= vrp.maxLength && origin !== 'NONE' && vrp.asn !== 0 && vrp.asn === origin.asn,
+      announcedPrefix.length <= vrp.maxLength && origin !== 'NONE' && vrp.asn !== 0 && vrp.asn === origin.asn,
   );
   return matched ? 'Valid' : 'Invalid';
 };

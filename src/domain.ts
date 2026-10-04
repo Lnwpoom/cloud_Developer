@@ -15,14 +15,15 @@ export type MonitoredPrefix = {
 export type AsPathSegment = number | readonly number[];
 export type AsPath = readonly AsPathSegment[];
 
-export type Source = 'live' | 'simulated';
+/** Where an observation came from: the live feed, or a simulation preset. */
+export type ObservationSource = 'live' | 'simulated';
 
 /** One announcement of one prefix, as seen from one peer. */
 export type Observation = {
   readonly announcedPrefix: Prefix;
   readonly asPath: AsPath;
   readonly peer: string;
-  readonly source: Source;
+  readonly source: ObservationSource;
   readonly seenAt: Date;
 };
 

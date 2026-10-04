@@ -12,9 +12,9 @@ import { parsePrefix } from '../prefix.ts';
 import { fail, isRecord, MAX_ASN } from './parse.ts';
 import type { ParseResult } from './parse.ts';
 
-export type RisLiveFrame = { readonly observations: readonly Observation[]; readonly skipped: readonly string[] };
+export type ParsedRisLiveFrame = { readonly observations: readonly Observation[]; readonly skipped: readonly string[] };
 
-type RisLiveParseResult = ParseResult<RisLiveFrame>;
+type RisLiveParseResult = ParseResult<ParsedRisLiveFrame>;
 
 const NONE: RisLiveParseResult = { ok: true, value: { observations: [], skipped: [] } };
 
@@ -77,7 +77,7 @@ const parseUpdate = (data: Record<string, unknown>): RisLiveParseResult => {
   return { ok: true, value: { observations, skipped } };
 };
 
-export const parseRisLiveMessage = (input: unknown): RisLiveParseResult => {
+export const parseRisLiveFrame = (input: unknown): RisLiveParseResult => {
   if (!isRecord(input) || typeof input['type'] !== 'string') return fail('expected an object with a "type"');
   const { type, data } = input;
   if (type === 'ris_error') {

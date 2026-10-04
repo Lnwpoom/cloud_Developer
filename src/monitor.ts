@@ -3,7 +3,7 @@
  * alerts. No I/O; feed it observations and read or subscribe to its alerts.
  */
 import { formatAsn } from './domain.ts';
-import type { AsPath, MonitoredPrefix, Observation, Origin, Source } from './domain.ts';
+import type { AsPath, MonitoredPrefix, Observation, Origin, ObservationSource } from './domain.ts';
 import { createListeners } from './listeners.ts';
 import { containsPrefix, samePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
@@ -16,7 +16,7 @@ export type Alert = {
   /** Stable identity: alert kind, source, announced prefix and origin AS. */
   readonly id: string;
   readonly kind: AlertKind;
-  readonly source: Source;
+  readonly source: ObservationSource;
   readonly monitoredPrefix: string;
   readonly declaredOrigin: number;
   readonly announcedPrefix: string;

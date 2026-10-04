@@ -6,7 +6,7 @@
  */
 import type { MonitoredPrefix, Observation } from './domain.ts';
 import { createListeners } from './listeners.ts';
-import { parseRisLiveMessage } from './parsers/ris-live.ts';
+import { parseRisLiveFrame } from './parsers/ris-live.ts';
 
 /** `connecting` only until the first attempt ends; any failed or dropped connection means `reconnecting`. */
 export type FeedStatus = 'connecting' | 'connected' | 'reconnecting';
@@ -88,7 +88,7 @@ export const startRisLiveFeed = (options: {
       options.log(`RIS Live: skipped a frame that is not JSON: ${data.slice(0, 120)}`);
       return;
     }
-    const parsed = parseRisLiveMessage(input);
+    const parsed = parseRisLiveFrame(input);
     if (!parsed.ok) {
       options.log(`RIS Live: skipped a frame: ${parsed.problem}`);
       return;

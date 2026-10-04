@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMonitor } from './monitor.ts';
-import type { Observation, Source } from './domain.ts';
+import type { Observation, ObservationSource } from './domain.ts';
 import type { MonitorChange } from './monitor.ts';
 import { parsePrefix } from './prefix.ts';
 import type { Prefix } from './prefix.ts';
@@ -103,7 +103,7 @@ describe('Monitor', () => {
     monitor.observe(announcement({ source: 'live', peer: 'peer-a' }));
     monitor.observe(announcement({ source: 'simulated', peer: 'peer-a' }));
 
-    const sources: Source[] = monitor.alerts().map((alert) => alert.source);
+    const sources: ObservationSource[] = monitor.alerts().map((alert) => alert.source);
     assert.deepEqual(sources.sort(), ['live', 'simulated']);
     assert.deepEqual(
       monitor.alerts().map((alert) => alert.peerCount),

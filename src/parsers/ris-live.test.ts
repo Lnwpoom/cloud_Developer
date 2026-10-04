@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseRisLiveMessage } from './ris-live.ts';
+import { parseRisLiveFrame } from './ris-live.ts';
 
 /** Real RIS Live frames; see fixtures/ris-live/README.md for their sources. */
 const fixtureText = (name: string): string =>
@@ -18,12 +18,12 @@ const update = (overrides: Record<string, unknown>): unknown => {
 };
 
 const observationsOf = (input: unknown) => {
-  const result = parseRisLiveMessage(input);
+  const result = parseRisLiveFrame(input);
   if (!result.ok) assert.fail(`expected observations, got problem: ${result.problem}`);
   return result.value.observations.map((observation) => ({ ...observation, announcedPrefix: observation.announcedPrefix.text }));
 };
 
-describe('parseRisLiveMessage', () => {
+describe('parseRisLiveFrame', () => {
   it('turns a real UPDATE into one live observation per announced prefix, carrying the peer and AS path', () => {
     assert.deepEqual(observationsOf(fixture('ris-message-announce-and-withdraw-2026.json')), [
       {
@@ -99,7 +99,7 @@ describe('parseRisLiveMessage', () => {
   it('reports a ris_error frame as a problem carrying the server message', () => {
     const line = fixtureText('ris-live-stream-2019-libbgpstream.jsonl').split('\n')[2] ?? '';
 
-    const result = parseRisLiveMessage(JSON.parse(line));
+    const result = parseRisLiveFrame(JSON.parse(line));
 
     assert.deepEqual(result, { ok: false, problem: 'ris_error: this is a test error message' });
   });
@@ -134,7 +134,7 @@ describe('parseRisLiveMessage', () => {
       ],
     });
 
-    const result = parseRisLiveMessage(frame);
+    const result = parseRisLiveFrame(frame);
 
     assert.ok(result.ok);
     assert.deepEqual(
@@ -149,7 +149,7 @@ describe('parseRisLiveMessage', () => {
   });
 
   it('reports no skipped prefixes for a well-formed UPDATE', () => {
-    const result = parseRisLiveMessage(fixture('ris-message-announce-and-withdraw-2026.json'));
+    const result = parseRisLiveFrame(fixture('ris-message-announce-and-withdraw-2026.json'));
 
     assert.ok(result.ok);
     assert.deepEqual(result.value.skipped, []);
@@ -182,7 +182,7 @@ describe('parseRisLiveMessage', () => {
     };
     for (const [name, input] of Object.entries(cases)) {
       it(name, () => {
-        const result = parseRisLiveMessage(input);
+        const result = parseRisLiveFrame(input);
         assert.equal(result.ok, false);
       });
     }

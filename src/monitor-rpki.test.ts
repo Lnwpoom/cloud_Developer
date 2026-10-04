@@ -58,14 +58,14 @@ describe('Monitor validation state (RFC 6811)', () => {
     assert.equal(stateOf({ monitoredPrefixes: ipv4, vrps }, announcement('203.0.113.0/24', [64510, 64666])), 'Invalid');
   });
 
-  it('is Invalid when the route is longer than the maxLength of a VRP with the right AS', () => {
+  it('is Invalid when the announced prefix is longer than the maxLength of a VRP with the right AS', () => {
     const monitoredPrefixes = [monitored('203.0.113.0/24', 64500), monitored('203.0.113.0/25', 64500)];
     const vrps = [vrp('203.0.113.0/24', 24, 64666)];
 
     assert.equal(stateOf({ monitoredPrefixes, vrps }, announcement('203.0.113.0/25', [64510, 64666])), 'Invalid');
   });
 
-  it('is NotFound when no VRP covers the route, even with VRPs for neighbouring and shorter-only space', () => {
+  it('is NotFound when no VRP covers the announced prefix, even with VRPs for neighbouring and shorter-only space', () => {
     const vrps = [
       vrp('203.0.112.0/24', 24, 64666),
       vrp('203.0.113.0/25', 25, 64666),
@@ -78,7 +78,7 @@ describe('Monitor validation state (RFC 6811)', () => {
     );
   });
 
-  it('is Invalid, never Valid, for a route covered by an AS0 VRP, even one whose path ends in AS 0', () => {
+  it('is Invalid, never Valid, for an announcement covered by an AS0 VRP, even one whose path ends in AS 0', () => {
     const vrps = [vrp('203.0.113.0/24', 24, 0)];
 
     assert.equal(stateOf({ monitoredPrefixes: ipv4, vrps }, announcement('203.0.113.0/24', [64510, 64666])), 'Invalid');
@@ -100,12 +100,12 @@ describe('Monitor validation state (RFC 6811)', () => {
 
   it('works on IPv6: Valid, Invalid and NotFound', () => {
     const monitoredPrefixes = [monitored('2001:db8:ffff::/48', 64500)];
-    const route = announcement('2001:db8:ffff::/48', [64510, 64666]);
+    const announced = announcement('2001:db8:ffff::/48', [64510, 64666]);
 
-    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8::/32', 48, 64666)] }, route), 'Valid');
-    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8::/32', 32, 64666)] }, route), 'Invalid');
-    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db9::/32', 48, 64666)] }, route), 'NotFound');
-    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8:fffe::/48', 48, 64666)] }, route), 'NotFound');
+    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8::/32', 48, 64666)] }, announced), 'Valid');
+    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8::/32', 32, 64666)] }, announced), 'Invalid');
+    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db9::/32', 48, 64666)] }, announced), 'NotFound');
+    assert.equal(stateOf({ monitoredPrefixes, vrps: [vrp('2001:db8:fffe::/48', 48, 64666)] }, announced), 'NotFound');
   });
 
   it('is Valid for a forged-origin more-specific under a loose ROA, and the alert is still raised (RFC 9319)', () => {
