@@ -2,6 +2,15 @@
 
 Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
 
+## Without `gh` (cloud sessions)
+
+Cloud sessions have no authenticated `gh`; use the GitHub MCP tools instead:
+
+- **Read**: `mcp__github__issue_read` (`get`, `get_comments`, `get_sub_issues`, `get_labels`).
+- **Create / update / close**: `mcp__github__issue_write`. Pass `parent_issue_number` on `create` to make the new issue a sub-issue.
+- **Labels**: names in `labels` are created automatically when missing.
+- **Blocking**: these tools create no native dependency edges, so list blockers in a `## Blocked by` section of the ticket body (`- #<n>`). The frontier query reads that section.
+
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
