@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BGP Hijack Monitor</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc;
+    --accent: #b42318; --accent-bg: #fdecea; --sim: #6941c6; --sim-bg: #f1ebfd; --ok: #067647;
+    --warn: #b54708; --warn-bg: #fef0c7;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #9b9a93; --line: #34342f;
+      --accent: #ff8a7a; --accent-bg: #3a1f1b; --sim: #c3a6ff; --sim-bg: #2a2140; --ok: #6ce9a6;
+      --warn: #fdb022; --warn-bg: #3a2c12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 16px; margin: 28px 0 10px; }
+  .status { color: var(--muted); font-size: 13px; }
+  .status[data-state="open"]::before { content: "\25CF "; color: var(--ok); }
+  .status[data-state="closed"]::before { content: "\25CF "; color: var(--accent); }
+  .feed { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 14px; }
+  .feed strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  #feed-status::before { content: "\25CF "; color: var(--muted); }
+  #feed-status[data-status="connected"]::before { color: var(--ok); }
+  #feed-status[data-status="reconnecting"]::before { color: var(--accent); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--sim); }
+  .empty { color: var(--muted); padding: 16px; border: 1px dashed var(--line); border-radius: 10px; }
+  ol#alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .alert { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 12px 14px; }
+  .alert-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .kind { font-weight: 600; color: var(--accent); }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; }
+  .badge.simulated { color: var(--sim); background: var(--sim-bg); }
+  .badge.live { color: var(--accent); background: var(--accent-bg); }
+  .peers { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .peers strong { color: var(--text); font-size: 17px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+  .flash { animation: flash 1s ease-out; }
+  @keyframes flash { from { background: var(--sim-bg); } to { background: var(--panel); } }
+  dd[data-state="Valid"] { color: var(--ok); }
+  dd[data-state="Invalid"] { color: var(--accent); }
+  dd[data-state="NotFound"] { color: var(--muted); }
+  .hint { color: var(--muted); font-family: system-ui, sans-serif; font-size: 13px; }
+  ol#advisories { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .advisory { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--warn);
+    border-radius: 10px; padding: 12px 14px; }
+  .advisory .kind { color: var(--warn); }
+  .advisory p { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>BGP Hijack Monitor</h1>
+    <span id="connection" class="status" data-state="connecting">Connecting to the monitor&hellip;</span>
+  </header>
+  <p class="feed">
+    <span>Live feed (RIS Live): <strong id="feed-status" data-status="connecting">connecting</strong></span>
+    <span><strong id="observation-count">0</strong> announcements observed</span>
+  </p>
+
+  <h2>Advisories <span class="hint">about your own RPKI setup</span></h2>
+  <p id="no-advisories" class="empty">No advisories. No ROA covering your monitored prefixes allows a maxLength longer than the prefix.</p>
+  <ol id="advisories"></ol>
+
+  <h2>Simulation</h2>
+  <div class="controls">
+    <button type="button" data-preset="origin-mismatch">Simulate: Origin mismatch</button>
+    <button type="button" data-preset="more-specific">Simulate: more-specific</button>
+    <button type="button" data-preset="forged-origin-more-specific">Simulate: forged origin + more-specific</button>
+  </div>
+
+  <h2>Alerts</h2>
+  <p id="no-alerts" class="empty">No alerts. Announcements of your monitored prefixes match their declared origin.</p>
+  <ol id="alerts"></ol>
+</main>
+
+<template id="alert-template">
+  <li class="alert">
+    <div class="alert-head">
+      <span class="badge"></span>
+      <span class="kind"></span>
+      <span class="peers"><strong></strong> <span class="peers-unit">peers</span></span>
+    </div>
+    <dl>
+      <dt>Monitored prefix</dt><dd data-field="monitoredPrefix"></dd>
+      <dt>Announced prefix</dt><dd data-field="announcedPrefix"></dd>
+      <dt>Origin AS</dt><dd data-field="origin"></dd>
+      <dt>Declared origin</dt><dd data-field="declaredOrigin"></dd>
+      <dt>RPKI validation</dt><dd data-field="validationState"></dd>
+      <dt>Example AS path</dt><dd data-field="examplePath"></dd>
+      <dt>First seen</dt><dd data-field="firstSeen"></dd>
+    </dl>
+  </li>
+</template>
+
+<template id="advisory-template">
+  <li class="advisory">
+    <div class="alert-head"><span class="kind"></span></div>
+    <dl>
+      <dt>Monitored prefix</dt><dd data-field="monitoredPrefix"></dd>
+      <dt>ROA</dt><dd data-field="roa"></dd>
+    </dl>
+    <p></p>
+  </li>
+</template>
+
+<script>
+  const KIND_LABELS = {
+    'origin-mismatch': 'Origin mismatch',
+    'unexpected-more-specific': 'Unexpected more-specific',
+  };
+  const ADVISORY_LABELS = { 'loose-roa': 'Loose ROA' };
+  const VALIDATION_LABELS = {
+    Valid: 'Valid (RPKI alone would accept this announcement)',
+    Invalid: 'Invalid (routers doing ROV would reject this announcement)',
+    NotFound: 'NotFound (no ROA covers this prefix)',
+  };
+  const alerts = new Map();
+  let arrivals = 0;
+
+  const asText = (asn) => `AS${asn}`;
+  const originText = (origin) => (origin === 'NONE' ? 'NONE (AS_SET)' : asText(origin.asn));
+  const pathText = (path) =>
+    path.map((segment) => (Array.isArray(segment) ? `{${segment.join(',')}}` : String(segment))).join(' ');
+
+  const fieldsOf = (alert) => ({
+    monitoredPrefix: alert.monitoredPrefix,
+    announcedPrefix: alert.announcedPrefix,
+    origin: originText(alert.origin),
+    declaredOrigin: asText(alert.declaredOrigin),
+    validationState: VALIDATION_LABELS[alert.validationState] ?? alert.validationState,
+    examplePath: pathText(alert.examplePath),
+    firstSeen: new Date(alert.firstSeen).toLocaleString(),
+  });
+
+  const renderAlert = (alert) => {
+    const item = document.getElementById('alert-template').content.firstElementChild.cloneNode(true);
+    item.dataset.id = alert.id;
+    const badge = item.querySelector('.badge');
+    badge.textContent = alert.source === 'simulated' ? 'SIMULATED' : 'LIVE';
+    badge.classList.add(alert.source);
+    item.querySelector('.kind').textContent = KIND_LABELS[alert.kind] ?? alert.kind;
+    item.querySelector('.peers strong').textContent = String(alert.peerCount);
+    item.querySelector('.peers-unit').textContent = alert.peerCount === 1 ? 'peer' : 'peers';
+    for (const [field, text] of Object.entries(fieldsOf(alert))) {
+      item.querySelector(`[data-field="${field}"]`).textContent = text;
+    }
+    item.querySelector('[data-field="validationState"]').dataset.state = alert.validationState;
+    return item;
+  };
+
+  const renderAdvisory = (advisory) => {
+    const item = document.getElementById('advisory-template').content.firstElementChild.cloneNode(true);
+    const { roa } = advisory;
+    const roaText = `${roa.prefix}, maxLength ${roa.maxLength}, ${asText(roa.asn)}`;
+    item.querySelector('.kind').textContent = ADVISORY_LABELS[advisory.kind] ?? advisory.kind;
+    item.querySelector('[data-field="monitoredPrefix"]').textContent = advisory.monitoredPrefix;
+    item.querySelector('[data-field="roa"]').textContent = roaText;
+    item.querySelector('p').textContent =
+      `This ROA lets ${asText(roa.asn)} originate more-specifics of ${advisory.monitoredPrefix} down to /${roa.maxLength}, ` +
+      'so a forged-origin more-specific (path ending in that AS) validates as Valid (RFC 9319). ' +
+      'A minimal ROA listing only the prefixes actually announced removes this.';
+    return item;
+  };
+
+  const renderAdvisories = (advisories) => {
+    document.getElementById('advisories').replaceChildren(...advisories.map(renderAdvisory));
+    document.getElementById('no-advisories').hidden = advisories.length > 0;
+  };
+
+  // Newest raised first: the snapshot lists alerts in the Monitor's raise order (newest first) and
+  // later alert events arrive in raise order. Never sort by firstSeen: live alerts carry the RIS
+  // timestamp but simulated ones the server clock.
+  const newestFirst = (a, b) => b.arrival - a.arrival;
+
+  const render = (changedId) => {
+    const list = document.getElementById('alerts');
+    list.replaceChildren(
+      ...[...alerts.values()].sort(newestFirst).map(({ alert }) => {
+        const item = renderAlert(alert);
+        if (alert.id === changedId) item.classList.add('flash');
+        return item;
+      }),
+    );
+    document.getElementById('no-alerts').hidden = alerts.size > 0;
+  };
+
+  const upsert = (alert) => {
+    const existing = alerts.get(alert.id);
+    alerts.set(alert.id, { alert, arrival: existing ? existing.arrival : (arrivals += 1) });
+  };
+
+  const setConnection = (state, text) => {
+    const element = document.getElementById('connection');
+    element.dataset.state = state;
+    element.textContent = text;
+  };
+
+  const events = new EventSource('/events');
+  events.addEventListener('open', () => setConnection('open', 'Connected to the monitor'));
+  events.addEventListener('error', () => setConnection('closed', 'Disconnected from the monitor, retrying…'));
+  events.addEventListener('snapshot', (event) => {
+    const snapshot = JSON.parse(event.data);
+    alerts.clear();
+    for (const alert of [...snapshot.alerts].reverse()) upsert(alert);
+    render();
+    renderAdvisories(snapshot.advisories);
+  });
+  events.addEventListener('alert', (event) => {
+    const alert = JSON.parse(event.data);
+    upsert(alert);
+    render(alert.id);
+  });
+
+  events.addEventListener('feed-status', (event) => {
+    const { status } = JSON.parse(event.data);
+    const element = document.getElementById('feed-status');
+    element.dataset.status = status;
+    element.textContent = status;
+  });
+  events.addEventListener('observations', (event) => {
+    const { count } = JSON.parse(event.data);
+    document.getElementById('observation-count').textContent = count.toLocaleString();
+  });
+
+  for (const button of document.querySelectorAll('button[data-preset]')) {
+    button.addEventListener('click', async () => {
+      const response = await fetch(`/simulate/${button.dataset.preset}`, { method: 'POST' });
+      if (!response.ok) alert(`Simulation failed: ${response.status} ${await response.text()}`);
+    });
+  }
+</script>
+</body>
+</html>

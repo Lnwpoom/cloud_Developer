@@ -1,0 +1,83 @@
+{
+	"metadata": {
+		"buildmachine": "josephine",
+		"buildtime": "2023-10-01T00:05:43Z",
+		"elapsedtime": 341,
+		"usertime": 307,
+		"systemtime": 27,
+		"roas": 189608,
+		"failedroas": 206,
+		"invalidroas": 0,
+		"aspas": 103,
+		"failedaspas": 101,
+		"invalidaspas": 0,
+		"bgpsec_pubkeys": 3,
+		"certificates": 39957,
+		"invalidcertificates": 2,
+		"taks": 0,
+		"tals": 5,
+		"invalidtals": 0,
+		"talfiles": [
+			"/etc/tals/apnic.tal",
+			"/etc/tals/afrinic.tal",
+			"/etc/tals/ripe.tal",
+			"/etc/tals/arin.tal",
+			"/etc/tals/lacnic.tal"
+		],
+		"manifests": 39955,
+		"failedmanifests": 72,
+		"stalemanifests": 0,
+		"crls": 39883,
+		"gbrs": 3,
+		"repositories": 90,
+		"vrps": 495060,
+		"uniquevrps": 464672,
+		"vaps": 2,
+		"uniquevaps": 2,
+		"cachedir_del_files": 1,
+		"cachedir_del_dirs": 2112,
+		"cachedir_superfluous_files": 4720,
+		"cachedir_del_superfluous_files": 186
+	},
+	"roas": [
+		{ "asn": 13335, "prefix": "1.0.0.0/24", "maxLength": 24, "ta": "apnic", "expires": 1696688258 },
+		{ "asn": 38803, "prefix": "1.0.4.0/24", "maxLength": 24, "ta": "apnic", "expires": 1696706619 },
+		{ "asn": 38803, "prefix": "1.0.4.0/22", "maxLength": 22, "ta": "apnic", "expires": 1696706619 },
+		{ "asn": 38803, "prefix": "1.0.5.0/24", "maxLength": 24, "ta": "apnic", "expires": 1696706619 },
+		{ "asn": 38803, "prefix": "1.0.6.0/24", "maxLength": 24, "ta": "apnic", "expires": 1696706619 },
+		{ "asn": 38803, "prefix": "1.0.7.0/24", "maxLength": 24, "ta": "apnic", "expires": 1696706619 },
+		{ "asn": 18144, "prefix": "1.0.64.0/18", "maxLength": 18, "ta": "apnic", "expires": 1696633557 },
+		{ "asn": 13335, "prefix": "1.1.1.0/24", "maxLength": 24, "ta": "apnic", "expires": 1696688258 },
+		{ "asn": 328720, "prefix": "2c0f:7400::/32", "maxLength": 48, "ta": "afrinic", "expires": 1696205037 },
+		{ "asn": 329063, "prefix": "2c0f:7680::/36", "maxLength": 36, "ta": "afrinic", "expires": 1696205037 },
+		{ "asn": 37105, "prefix": "2c0f:ffd8::/32", "maxLength": 32, "ta": "afrinic", "expires": 1696205037 },
+		{ "asn": 64500, "prefix": "203.0.113.0/24", "maxLength": 25, "ta": "demo", "expires": 4102444800 }
+	],
+	"bgpsec_keys": [
+		{
+			"asn": 945,
+			"ski": "510F485D29A29DB7B515F9C478F8ED3CB7AA7D23",
+			"pubkey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhv5HEBGixUjKJTlenvcD1Axyi07rFdVY1KhN4vMPYy5y0Mx6zfaiEqJN27jK/l61xC36Vsaezd7eXAsZ1AEEsQ==",
+			"ta": "arin",
+			"expires": 1712543522
+		},
+		{
+			"asn": 15562,
+			"ski": "5D4250E2D81D4448D8A29EFCE91D29FF075EC9E2",
+			"pubkey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgFcjQ/g//LAQerAH2Mpp+GucoDAGBbhIqD33wNPsXxnAGb+mtZ7XQrVO9DQ6UlAShtig5+QfEKpTtFgiqfiAFQ==",
+			"ta": "ripe",
+			"expires": 1699105676
+		},
+		{
+			"asn": 15562,
+			"ski": "BE889B55D0B737397D75C49F485B858FA98AD11F",
+			"pubkey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE4FxJr0n2bux1uX1Evl+QWwZYvIadPjLuFX2mxqKuAGUhKnr7VLLDgrE++l9p5eH2kWTNVAN22FUU3db/RKpE2w==",
+			"ta": "ripe",
+			"expires": 1699105679
+		}
+	],
+	"aspas": [
+		{ "customer_asid": 945, "expires": 1696173179, "providers": [ 1299, 6939, 8849, 20473, 50058, 59105 ] },
+		{ "customer_asid": 15562, "expires": 1696139022, "providers": [ 2914, 8283, 51088, 206238 ] }
+	]
+}
