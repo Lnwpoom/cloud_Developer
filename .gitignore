@@ -1,4 +1,5 @@
 node_modules/
 vrps.cache.json
 vrps.cache.json.tmp
+live.config.json
 .claude/worktrees/

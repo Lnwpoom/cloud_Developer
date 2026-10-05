@@ -35,6 +35,12 @@ service จะเชื่อมต่อกับ RIPE RIS Live และ subsc
 
 ปุ่ม simulation ใช้ monitored prefix ตัวแรก ถ้าไฟล์หายไปหรือรูปแบบผิด service จะไม่ยอมเริ่มทำงาน และจะบอกชื่อไฟล์กับปัญหาที่เจอ
 
+`monitor.config.json` ที่ commit ไว้เป็นตัวอย่างที่ `npm run demo` ใช้ ให้ใส่ prefix จริงของคุณใน `live.config.json` แทน (ไฟล์นี้อยู่ใน `.gitignore`) แล้วชี้ service ไปที่ไฟล์นั้น
+
+```sh
+MONITOR_CONFIG_FILE=live.config.json npm start
+```
+
 ## RPKI
 
 ตอนเริ่มทำงาน service จะดึง VRP หนึ่งครั้งจาก `VRP_URL` (JSON ของ rpki-client, Routinator หรือ RIPEstat) แล้วบันทึก response ดิบไว้ที่ `VRP_CACHE_FILE`
@@ -75,6 +81,18 @@ npm run demo
 
 ปุ่ม simulation ใช้ได้แบบออฟไลน์ ส่วน RIS Live feed ยังต้องใช้เครือข่าย ถ้าไม่มีเน็ต สถานะ feed จะขึ้น reconnecting ตัวแปรอื่นที่ตั้งไว้ใน shell (`PORT`, `RIS_LIVE_URL`, ...) ยังมีผลเหมือนเดิม
 
+ถ้าจะรันเดโมคู่กับ service ที่ใช้ prefix จริง ให้เดโมใช้ port ของตัวเอง
+
+```sh
+# terminal 1: prefix จริง, http://localhost:8080/
+MONITOR_CONFIG_FILE=live.config.json npm start
+
+# terminal 2: เดโมกับ monitor.config.json ตัวอย่าง, http://localhost:8081/
+PORT=8081 npm run demo
+```
+
+ตั้ง `MONITOR_CONFIG_FILE` ไว้ในบรรทัด `npm start` เท่านั้น อย่าใช้ `export` เพราะเดโมรับ environment ของ shell ไปด้วย ถ้า export ไว้ เดโมจะอ่าน prefix จริงของคุณ และ Loose ROA advisory กับผล Valid จะไม่ขึ้น
+
 ## แผนทดสอบจริงและเช็กลิสต์ก่อนวันนำเสนอ
 
 ทำตามลำดับ ช่วงที่ 1 ถึง 3 ทำล่วงหน้า ช่วงที่ 4 ทำเช้าวันงาน
@@ -95,7 +113,7 @@ npm run typecheck && npm run lint && npm test
 
 ### ช่วงที่ 2: ทดสอบกับเครือข่ายจริง ([#10](https://github.com/Lnwpoom/cloud_Developer/issues/10))
 
-**1. ทำไฟล์ config แยกสำหรับ prefix จริง** เช่น `live.config.json` และเก็บ `monitor.config.json` ไว้เป็นตัวอย่างเดิม เพราะ `npm run demo` ใช้ไฟล์นั้น ใส่ prefix ที่มีการประกาศจริงพร้อม origin AS ที่ถูกต้อง
+**1. สร้าง `live.config.json`** (ดู [การตั้งค่า](#การตั้งค่า)) ใส่ prefix ที่มีการประกาศจริงพร้อม origin AS ที่ถูกต้อง
 
 ```json
 {
@@ -131,12 +149,7 @@ prefix ในตัวอย่างยังไม่ได้ตรวจส�
 
 ### ช่วงที่ 3: ซ้อมนำเสนอ (อย่างน้อยหนึ่งครั้งบนเครื่องจริง)
 
-**ข้อควรรู้:** เมื่อใช้ prefix จริงกับ VRP จริง ปุ่ม forged origin + more-specific จะได้ **Valid** ก็ต่อเมื่อ ROA จริงของ prefix นั้นเป็น Loose ROA เท่านั้น ถ้าไม่ใช่จะได้ **Invalid** และประเด็นสำคัญของเรื่องจะไม่ปรากฏ จึงแนะนำให้เปิดสองหน้าต่าง
-
-```sh
-MONITOR_CONFIG_FILE=live.config.json npm start   # หน้าต่าง 1: port 8080, live feed ของ prefix จริง
-PORT=8081 npm run demo                           # หน้าต่าง 2: port 8081, ข้อมูลเดโมที่มี Loose ROA
-```
+**ข้อควรรู้:** เมื่อใช้ prefix จริงกับ VRP จริง ปุ่ม forged origin + more-specific จะได้ **Valid** ก็ต่อเมื่อ ROA จริงของ prefix นั้นเป็น Loose ROA เท่านั้น ถ้าไม่ใช่จะได้ **Invalid** และประเด็นสำคัญของเรื่องจะไม่ปรากฏ จึงแนะนำให้เปิดสองหน้าต่างตามคำสั่งใน [Offline demo](#offline-demo): หน้าต่าง 1 คือ live feed ของ prefix จริงที่ port 8080 หน้าต่าง 2 คือข้อมูลเดโมที่มี Loose ROA ที่ port 8081
 
 ลำดับเล่าเรื่องที่แนะนำ (หน้าต่าง 2):
 
