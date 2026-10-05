@@ -49,6 +49,16 @@ Environment variables (all optional):
 
 For example: `PORT=3000 MONITOR_CONFIG_FILE=/etc/bgp/prefixes.json npm start`.
 
+## Offline demo
+
+```sh
+npm run demo
+```
+
+Starts the service without the VRP endpoint: `VRP_URL` points at a local URL that always fails, and `VRP_CACHE_FILE` points at a temp copy of `demo/vrps.demo.json`, so the committed file is never overwritten. That file is the rpki-client fixture `src/parsers/fixtures/vrps/vrps-rpki-client-2023.json` plus one ROA for `203.0.113.0/24`, maxLength 25, AS64500. With the example `monitor.config.json` the page shows a Loose ROA advisory, and **Simulate: forged origin + more-specific** raises an alert whose validation state is Valid.
+
+The simulation buttons work offline. The live RIS Live feed still needs the network; without it the feed status shows reconnecting. Other variables (`PORT`, `RIS_LIVE_URL`, ...) set in your shell still apply.
+
 ## Develop
 
 ```sh
@@ -70,5 +80,6 @@ Layout:
 - `src/config.ts`: the only reader of `process.env`.
 - `src/listeners.ts`: the listener set behind every `onChange`.
 - `src/simulation.ts`: simulation presets, one synthetic peer per press.
+- `scripts/demo.ts`: `npm run demo`; `demo/vrps.demo.json` is its VRP data.
 - `src/server.ts`: the page, server-sent events at `/events` (`snapshot`, `alert`, `feed-status`, `observations`) and `POST /simulate/:preset`.
 - `public/index.html`: the web page.
