@@ -30,6 +30,12 @@ List your monitored prefixes and the declared origin of each in `monitor.config.
 
 The simulation buttons use the first monitored prefix. If the file is missing or malformed, the service refuses to start and names the file and the problem.
 
+The committed `monitor.config.json` is the example that `npm run demo` relies on. Put your real prefixes in `live.config.json` instead (it is git-ignored) and point the service at it:
+
+```sh
+MONITOR_CONFIG_FILE=live.config.json npm start
+```
+
 ## RPKI
 
 At startup the service fetches VRPs once from `VRP_URL` (rpki-client, Routinator or RIPEstat JSON) and saves the raw response to `VRP_CACHE_FILE`. If the fetch fails it uses that cache, and if there is no usable cache either it refuses to start. VRPs are not refreshed while it runs. Before a demo on an unreliable network, start it once with a working connection so the cache exists.
@@ -58,6 +64,18 @@ npm run demo
 Starts the service without the VRP endpoint: `VRP_URL` points at a local URL that always fails, and `VRP_CACHE_FILE` points at a temp copy of `demo/vrps.demo.json`, so the committed file is never overwritten. That file is the rpki-client fixture `src/parsers/fixtures/vrps/vrps-rpki-client-2023.json` plus one ROA for `203.0.113.0/24`, maxLength 25, AS64500. With the example `monitor.config.json` the page shows a Loose ROA advisory, and **Simulate: forged origin + more-specific** raises an alert whose validation state is Valid.
 
 The simulation buttons work offline. The live RIS Live feed still needs the network; without it the feed status shows reconnecting. Other variables (`PORT`, `RIS_LIVE_URL`, ...) set in your shell still apply.
+
+To run the demo next to the live service, give the demo its own port:
+
+```sh
+# terminal 1: real prefixes, http://localhost:8080/
+MONITOR_CONFIG_FILE=live.config.json npm start
+
+# terminal 2: demo with the example monitor.config.json, http://localhost:8081/
+PORT=8081 npm run demo
+```
+
+Set `MONITOR_CONFIG_FILE` on the `npm start` line only, not with `export`: the demo inherits your shell's environment, so an exported value would make it read your real prefixes and the Loose ROA advisory and Valid state would not appear.
 
 ## Develop
 
