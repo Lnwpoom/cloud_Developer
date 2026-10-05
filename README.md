@@ -1,23 +1,28 @@
 # BGP Hijack Monitor
 
-Watches BGP announcements of your **monitored prefixes** and raises an **alert** when one is announced in a way your **declared origin** does not support. Terms are defined in [GLOSSARY.md](GLOSSARY.md); why the declared origin drives alerts is in [ADR 0001](docs/adr/0001-declared-origin-primary-rpki-as-context.md).
+เฝ้าดู BGP announcement ของ **monitored prefix** ของคุณ และแจ้ง **alert** เมื่อมีการประกาศ prefix นั้นในแบบที่ **declared origin** ของคุณไม่รองรับ คำศัพท์ต่าง ๆ อธิบายไว้ใน [GLOSSARY.md](GLOSSARY.md) ส่วนเหตุผลที่ใช้ declared origin เป็นตัวตัดสิน alert อยู่ใน [ADR 0001](docs/adr/0001-declared-origin-primary-rpki-as-context.md)
 
-## Run it
+## วิธีรัน
 
-Needs Node.js 22.18 or later (it runs the TypeScript sources directly).
+ต้องใช้ Node.js 22.18 ขึ้นไป (รัน TypeScript source โดยตรง)
 
 ```sh
 npm install
 npm start
 ```
 
-The service connects to RIPE RIS Live and subscribes to announcements of every monitored prefix and its more-specifics. The page shows the live feed status (connecting, connected, or reconnecting whenever RIS Live cannot be reached) and how many announcements it has observed; alerts from the feed are marked LIVE. The documentation prefixes in the sample configuration never appear on the real Internet, so use a prefix that is actually announced to see the counter move.
+service จะเชื่อมต่อกับ RIPE RIS Live และ subscribe announcement ของ monitored prefix ทุกตัวรวมถึง more-specific ของมัน หน้าเว็บแสดงสถานะของ live feed (connecting, connected หรือ reconnecting เมื่อติดต่อ RIS Live ไม่ได้) และจำนวน announcement ที่สังเกตได้ alert ที่มาจาก feed จะมีป้าย LIVE prefix ใน configuration ตัวอย่างเป็น documentation prefix ซึ่งไม่มีวันปรากฏบนอินเทอร์เน็ตจริง ถ้าอยากเห็นตัวนับขยับ ให้ใช้ prefix ที่มีการประกาศจริง
 
-Then open <http://localhost:8080/> and press **Simulate: Origin mismatch**. A SIMULATED Origin mismatch alert appears without a reload; press again and its peer count rises. **Simulate: more-specific** announces the first monitored prefix plus one bit from a foreign AS, and **Simulate: forged origin + more-specific** announces the same longer prefix with the path `[foreign AS, declared origin]` (the Celer Bridge pattern); both raise an Unexpected more-specific alert.
+จากนั้นเปิด <http://localhost:8080/> แล้วกด **Simulate: Origin mismatch** จะมี alert แบบ SIMULATED ชนิด Origin mismatch ขึ้นมาโดยไม่ต้อง reload กดอีกครั้งแล้วจำนวน peer จะเพิ่มขึ้น
 
-## Configure it
+- **Simulate: more-specific** ประกาศ monitored prefix ตัวแรกที่ยาวขึ้นหนึ่ง bit จาก foreign AS
+- **Simulate: forged origin + more-specific** ประกาศ prefix ที่ยาวขึ้นตัวเดียวกัน ด้วย path `[foreign AS, declared origin]` (รูปแบบเดียวกับเหตุการณ์ Celer Bridge)
 
-List your monitored prefixes and the declared origin of each in `monitor.config.json` (IPv4 or IPv6, host bits zero, AS numbers 1 to 4294967295):
+ทั้งสองปุ่มทำให้เกิด alert ชนิด Unexpected more-specific
+
+## การตั้งค่า
+
+ระบุ monitored prefix และ declared origin ของแต่ละตัวใน `monitor.config.json` (IPv4 หรือ IPv6, host bit ต้องเป็นศูนย์, AS number ตั้งแต่ 1 ถึง 4294967295)
 
 ```json
 {
@@ -28,15 +33,9 @@ List your monitored prefixes and the declared origin of each in `monitor.config.
 }
 ```
 
-The simulation buttons use the first monitored prefix. If the file is missing or malformed, the service refuses to start and names the file and the problem.
+ปุ่ม simulation ใช้ monitored prefix ตัวแรก ถ้าไฟล์หายไปหรือรูปแบบผิด service จะไม่ยอมเริ่มทำงาน และจะบอกชื่อไฟล์กับปัญหาที่เจอ
 
-The committed `monitor.config.json` is the example that `npm run demo` relies on. Put your real prefixes in `live.config.json` instead (it is git-ignored) and point the service at it:
-
-```sh
-MONITOR_CONFIG_FILE=live.config.json npm start
-```
-
-The committed `monitor.config.json` is the example that `npm run demo` relies on. Put your real prefixes in `live.config.json` instead (it is git-ignored) and point the service at it:
+`monitor.config.json` ที่ commit ไว้เป็นตัวอย่างที่ `npm run demo` ใช้ ให้ใส่ prefix จริงของคุณใน `live.config.json` แทน (ไฟล์นี้อยู่ใน `.gitignore`) แล้วชี้ service ไปที่ไฟล์นั้น
 
 ```sh
 MONITOR_CONFIG_FILE=live.config.json npm start
@@ -44,22 +43,28 @@ MONITOR_CONFIG_FILE=live.config.json npm start
 
 ## RPKI
 
-At startup the service fetches VRPs once from `VRP_URL` (rpki-client, Routinator or RIPEstat JSON) and saves the raw response to `VRP_CACHE_FILE`. If the fetch fails it uses that cache, and if there is no usable cache either it refuses to start. VRPs are not refreshed while it runs. Before a demo on an unreliable network, start it once with a working connection so the cache exists.
+ตอนเริ่มทำงาน service จะดึง VRP หนึ่งครั้งจาก `VRP_URL` (JSON ของ rpki-client, Routinator หรือ RIPEstat) แล้วบันทึก response ดิบไว้ที่ `VRP_CACHE_FILE`
 
-Every alert shows its RFC 6811 validation state (Valid, Invalid or NotFound) as context; it never decides whether an alert is raised. The **Advisories** section lists each **Loose ROA**: a ROA covering a monitored prefix whose maxLength is longer than the prefix.
+- ถ้าดึงไม่สำเร็จ จะใช้ cache นั้นแทน
+- ถ้าไม่มี cache ที่ใช้ได้ด้วย จะไม่ยอมเริ่มทำงาน
+- VRP ไม่ถูก refresh ระหว่างที่ service ทำงานอยู่
 
-Environment variables (all optional):
+ก่อนเดโมในที่ที่เครือข่ายไม่เสถียร ให้รันหนึ่งครั้งตอนเน็ตใช้ได้ เพื่อให้มี cache อยู่แล้ว
 
-| Variable | Default | Meaning |
+alert ทุกรายการแสดง validation state ตาม RFC 6811 (Valid, Invalid หรือ NotFound) เป็นข้อมูลประกอบเท่านั้น ค่านี้ไม่เคยเป็นตัวตัดสินว่าจะเกิด alert หรือไม่ ส่วน **Advisories** แสดง **Loose ROA** ทุกตัว ซึ่งหมายถึง ROA ที่ครอบคลุม monitored prefix และมี maxLength ยาวกว่าตัว prefix
+
+Environment variable (ไม่บังคับทั้งหมด):
+
+| Variable | ค่าเริ่มต้น | ความหมาย |
 | --- | --- | --- |
-| `PORT` | `8080` | HTTP port of the web page |
-| `MONITOR_CONFIG_FILE` | `monitor.config.json` | Path to the configuration file |
-| `VRP_URL` | `https://console.rpki-client.org/vrps.json` | VRP JSON endpoint fetched at startup |
-| `VRP_CACHE_FILE` | `vrps.cache.json` | Last fetched VRP JSON, used when the endpoint is unreachable |
-| `RIS_LIVE_URL` | `wss://ris-live.ripe.net/v1/ws/` | RIPE RIS Live WebSocket URL (`ws://` or `wss://`) |
-| `RIS_LIVE_CLIENT` | `bgp-hijack-monitor` | `client` identifier sent to RIS Live; name your deployment |
+| `PORT` | `8080` | HTTP port ของหน้าเว็บ |
+| `MONITOR_CONFIG_FILE` | `monitor.config.json` | path ของไฟล์ configuration |
+| `VRP_URL` | `https://console.rpki-client.org/vrps.json` | VRP JSON endpoint ที่ดึงตอนเริ่มทำงาน |
+| `VRP_CACHE_FILE` | `vrps.cache.json` | VRP JSON ล่าสุดที่ดึงมา ใช้เมื่อติดต่อ endpoint ไม่ได้ |
+| `RIS_LIVE_URL` | `wss://ris-live.ripe.net/v1/ws/` | RIPE RIS Live WebSocket URL (`ws://` หรือ `wss://`) |
+| `RIS_LIVE_CLIENT` | `bgp-hijack-monitor` | `client` identifier ที่ส่งให้ RIS Live ควรตั้งเป็นชื่อ deployment ของคุณ |
 
-For example: `PORT=3000 MONITOR_CONFIG_FILE=/etc/bgp/prefixes.json npm start`.
+ตัวอย่าง: `PORT=3000 MONITOR_CONFIG_FILE=/etc/bgp/prefixes.json npm start`
 
 ## Offline demo
 
@@ -67,17 +72,26 @@ For example: `PORT=3000 MONITOR_CONFIG_FILE=/etc/bgp/prefixes.json npm start`.
 npm run demo
 ```
 
-Starts the service without the VRP endpoint: `VRP_URL` points at a local URL that always fails, and `VRP_CACHE_FILE` points at a temp copy of `demo/vrps.demo.json`, so the committed file is never overwritten. That file is the rpki-client fixture `src/parsers/fixtures/vrps/vrps-rpki-client-2023.json` plus one ROA for `203.0.113.0/24`, maxLength 25, AS64500. With the example `monitor.config.json` the page shows a Loose ROA advisory, and **Simulate: forged origin + more-specific** raises an alert whose validation state is Valid.
+รัน service โดยไม่ต้องใช้ VRP endpoint
 
-The simulation buttons work offline. The live RIS Live feed still needs the network; without it the feed status shows reconnecting. Other variables (`PORT`, `RIS_LIVE_URL`, ...) set in your shell still apply.
+- `VRP_URL` ชี้ไปที่ local URL ที่ล้มเหลวเสมอ
+- `VRP_CACHE_FILE` ชี้ไปที่สำเนาชั่วคราวของ `demo/vrps.demo.json` ไฟล์ที่ commit ไว้จึงไม่ถูกเขียนทับ
 
-<<<<<<< HEAD
-To run the demo next to the live service, give the demo its own port:
-=======
-<<<<<<< HEAD
 ไฟล์นี้คือ rpki-client fixture `src/parsers/fixtures/vrps/vrps-rpki-client-2023.json` ที่เพิ่ม ROA ของ `203.0.113.0/24` (maxLength 25, AS64500) อีกหนึ่งตัว เมื่อใช้กับ `monitor.config.json` ตัวอย่าง หน้าเว็บจะแสดง Loose ROA advisory และปุ่ม **Simulate: forged origin + more-specific** จะได้ alert ที่มี validation state เป็น Valid
 
 ปุ่ม simulation ใช้ได้แบบออฟไลน์ ส่วน RIS Live feed ยังต้องใช้เครือข่าย ถ้าไม่มีเน็ต สถานะ feed จะขึ้น reconnecting ตัวแปรอื่นที่ตั้งไว้ใน shell (`PORT`, `RIS_LIVE_URL`, ...) ยังมีผลเหมือนเดิม
+
+ถ้าจะรันเดโมคู่กับ service ที่ใช้ prefix จริง ให้เดโมใช้ port ของตัวเอง
+
+```sh
+# terminal 1: prefix จริง, http://localhost:8080/
+MONITOR_CONFIG_FILE=live.config.json npm start
+
+# terminal 2: เดโมกับ monitor.config.json ตัวอย่าง, http://localhost:8081/
+PORT=8081 npm run demo
+```
+
+ตั้ง `MONITOR_CONFIG_FILE` ไว้ในบรรทัด `npm start` เท่านั้น อย่าใช้ `export` เพราะเดโมรับ environment ของ shell ไปด้วย ถ้า export ไว้ เดโมจะอ่าน prefix จริงของคุณ และ Loose ROA advisory กับผล Valid จะไม่ขึ้น
 
 ## แผนทดสอบจริงและเช็กลิสต์ก่อนวันนำเสนอ
 
@@ -86,24 +100,20 @@ To run the demo next to the live service, give the demo its own port:
 ### ช่วงที่ 1: เตรียมเครื่อง (ล่วงหน้าหลายวัน)
 
 ใช้โน้ตบุ๊กเครื่องที่จะใช้นำเสนอจริง
->>>>>>> 9df6660 (แยกสำหรับ prefix live กับ demo)
 
 ```sh
-# terminal 1: real prefixes, http://localhost:8080/
-MONITOR_CONFIG_FILE=live.config.json npm start
-
-# terminal 2: demo with the example monitor.config.json, http://localhost:8081/
-PORT=8081 npm run demo
+node --version          # ต้องเป็น 22.18 ขึ้นไป
+git clone https://github.com/Lnwpoom/cloud_Developer.git
+cd cloud_Developer
+npm ci                  # ทำตอนมีเน็ต ที่งานอาจติดตั้งไม่ได้
+npm run typecheck && npm run lint && npm test
 ```
 
-Set `MONITOR_CONFIG_FILE` on the `npm start` line only, not with `export`: the demo inherits your shell's environment, so an exported value would make it read your real prefixes and the Loose ROA advisory and Valid state would not appear.
+**ผ่านเมื่อ:** ทั้งสามคำสั่งผ่าน และ test รายงาน `# fail 0`
 
-<<<<<<< HEAD
-## Develop
-=======
 ### ช่วงที่ 2: ทดสอบกับเครือข่ายจริง ([#10](https://github.com/Lnwpoom/cloud_Developer/issues/10))
 
-**1. ทำไฟล์ config แยกสำหรับ prefix จริง** เช่น `live.config.json` และเก็บ `monitor.config.json` ไว้เป็นตัวอย่างเดิม เพราะ `npm run demo` ใช้ไฟล์นั้น ใส่ prefix ที่มีการประกาศจริงพร้อม origin AS ที่ถูกต้อง
+**1. สร้าง `live.config.json`** (ดู [การตั้งค่า](#การตั้งค่า)) ใส่ prefix ที่มีการประกาศจริงพร้อม origin AS ที่ถูกต้อง
 
 ```json
 {
@@ -139,12 +149,7 @@ prefix ในตัวอย่างยังไม่ได้ตรวจส�
 
 ### ช่วงที่ 3: ซ้อมนำเสนอ (อย่างน้อยหนึ่งครั้งบนเครื่องจริง)
 
-**ข้อควรรู้:** เมื่อใช้ prefix จริงกับ VRP จริง ปุ่ม forged origin + more-specific จะได้ **Valid** ก็ต่อเมื่อ ROA จริงของ prefix นั้นเป็น Loose ROA เท่านั้น ถ้าไม่ใช่จะได้ **Invalid** และประเด็นสำคัญของเรื่องจะไม่ปรากฏ จึงแนะนำให้เปิดสองหน้าต่าง
-
-```sh
-MONITOR_CONFIG_FILE=live.config.json npm start   # หน้าต่าง 1: port 8080, live feed ของ prefix จริง
-PORT=8081 npm run demo                           # หน้าต่าง 2: port 8081, ข้อมูลเดโมที่มี Loose ROA
-```
+**ข้อควรรู้:** เมื่อใช้ prefix จริงกับ VRP จริง ปุ่ม forged origin + more-specific จะได้ **Valid** ก็ต่อเมื่อ ROA จริงของ prefix นั้นเป็น Loose ROA เท่านั้น ถ้าไม่ใช่จะได้ **Invalid** และประเด็นสำคัญของเรื่องจะไม่ปรากฏ จึงแนะนำให้เปิดสองหน้าต่างตามคำสั่งใน [Offline demo](#offline-demo): หน้าต่าง 1 คือ live feed ของ prefix จริงที่ port 8080 หน้าต่าง 2 คือข้อมูลเดโมที่มี Loose ROA ที่ port 8081
 
 ลำดับเล่าเรื่องที่แนะนำ (หน้าต่าง 2):
 
@@ -181,22 +186,6 @@ PORT=8081 npm run demo                           # หน้าต่าง 2: p
 [#11](https://github.com/Lnwpoom/cloud_Developer/issues/11) (RIPEstat VRP parser) ไม่จำเป็นต่อการนำเสนอ เพราะค่าเริ่มต้นใช้ endpoint ของ rpki-client
 
 ## การพัฒนา
-=======
-To run the demo next to the live service, give the demo its own port:
-
-```sh
-# terminal 1: real prefixes, http://localhost:8080/
-MONITOR_CONFIG_FILE=live.config.json npm start
-
-# terminal 2: demo with the example monitor.config.json, http://localhost:8081/
-PORT=8081 npm run demo
-```
-
-Set `MONITOR_CONFIG_FILE` on the `npm start` line only, not with `export`: the demo inherits your shell's environment, so an exported value would make it read your real prefixes and the Loose ROA advisory and Valid state would not appear.
-
-## Develop
->>>>>>> bd56326 (แยกสำหรับ prefix live กับ demo)
->>>>>>> 9df6660 (แยกสำหรับ prefix live กับ demo)
 
 ```sh
 npm run typecheck
@@ -204,19 +193,21 @@ npm run lint
 npm test
 ```
 
-Layout:
+มาตรฐานการเขียนโค้ดอยู่ใน [CODING_STANDARDS.md](CODING_STANDARDS.md)
 
-- `src/monitor.ts`: the Monitor, the detection core (no I/O).
-- `src/domain.ts`: domain types shared across modules (monitored prefix, AS path, observation, origin) and `formatAsn`.
-- `src/prefix.ts`: IPv4/IPv6 prefix parsing and containment.
-- `src/rpki.ts`: RFC 6811 validation state and Loose ROA advisories, used by the Monitor.
-- `src/parsers/`: boundary parsers from `unknown` input (configuration file, VRP JSON, RIS Live frames), with shared helpers and `ParseResult` in `parse.ts`. Real fixtures and their sources are in `src/parsers/fixtures/vrps/` and `src/parsers/fixtures/ris-live/`.
-- `src/vrp-source.ts`: fetches the VRPs at startup, with the cache fallback.
-- `src/ris-live-feed.ts`: the RIS Live WebSocket client (subscribe, count, ping, reconnect with backoff).
-- `src/monitor-config-file.ts`: reads and parses the configuration file.
-- `src/config.ts`: the only reader of `process.env`.
-- `src/listeners.ts`: the listener set behind every `onChange`.
-- `src/simulation.ts`: simulation presets, one synthetic peer per press.
-- `scripts/demo.ts`: `npm run demo`; `demo/vrps.demo.json` is its VRP data.
-- `src/server.ts`: the page, server-sent events at `/events` (`snapshot`, `alert`, `feed-status`, `observations`) and `POST /simulate/:preset`.
-- `public/index.html`: the web page.
+โครงสร้าง:
+
+- `src/monitor.ts`: Monitor ซึ่งเป็นแกนการตรวจจับ (ไม่มี I/O)
+- `src/domain.ts`: domain type ที่ใช้ร่วมกันหลาย module (monitored prefix, AS path, observation, origin) และ `formatAsn`
+- `src/prefix.ts`: การ parse prefix IPv4/IPv6 และการตรวจว่า prefix หนึ่งอยู่ในอีกตัวหรือไม่
+- `src/rpki.ts`: validation state ตาม RFC 6811 และ Loose ROA advisory ที่ Monitor ใช้
+- `src/parsers/`: boundary parser จาก input แบบ `unknown` (ไฟล์ configuration, VRP JSON, RIS Live frame) helper ที่ใช้ร่วมกันและ `ParseResult` อยู่ใน `parse.ts` fixture จริงพร้อมแหล่งที่มาอยู่ใน `src/parsers/fixtures/vrps/` และ `src/parsers/fixtures/ris-live/`
+- `src/vrp-source.ts`: ดึง VRP ตอนเริ่มทำงาน พร้อม cache fallback
+- `src/ris-live-feed.ts`: RIS Live WebSocket client (subscribe, นับ, ping, reconnect พร้อม backoff)
+- `src/monitor-config-file.ts`: อ่านและ parse ไฟล์ configuration
+- `src/config.ts`: ที่เดียวที่อ่าน `process.env`
+- `src/listeners.ts`: listener set ที่อยู่เบื้องหลัง `onChange` ทุกตัว
+- `src/simulation.ts`: simulation preset ใช้ synthetic peer ใหม่หนึ่งตัวต่อการกดหนึ่งครั้ง
+- `scripts/demo.ts`: `npm run demo` โดยใช้ `demo/vrps.demo.json` เป็นข้อมูล VRP
+- `src/server.ts`: หน้าเว็บ, server-sent events ที่ `/events` (`snapshot`, `alert`, `feed-status`, `observations`) และ `POST /simulate/:preset`
+- `public/index.html`: หน้าเว็บ
