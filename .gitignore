@@ -1,3 +1,4 @@
 node_modules/
 vrps.cache.json
 vrps.cache.json.tmp
+.claude/worktrees/
