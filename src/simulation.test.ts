@@ -8,7 +8,7 @@ import { createSimulator, isSimulationPreset, SimulatorSetupError } from './simu
 
 const monitored = (text: string, declaredOrigin: number): MonitoredPrefix => {
   const parsed = parsePrefix(text);
-  if (!parsed.ok) throw new Error(parsed.problem);
+  if (!parsed.ok) assert.fail(parsed.problem);
   return { prefix: parsed.value, declaredOrigin };
 };
 

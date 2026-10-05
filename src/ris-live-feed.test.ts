@@ -23,7 +23,7 @@ const TRUNCATED = frame('ris-live-stream-2019-libbgpstream.jsonl').split('\n')[6
 
 const monitored = (text: string, declaredOrigin: number): MonitoredPrefix => {
   const parsed = parsePrefix(text);
-  if (!parsed.ok) throw new Error(parsed.problem);
+  if (!parsed.ok) assert.fail(parsed.problem);
   return { prefix: parsed.value, declaredOrigin };
 };
 const MONITORED = [monitored('2806:320::/32', 28438), monitored('2607:ffc0:1000::/36', 13340)];

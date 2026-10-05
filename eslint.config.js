@@ -26,6 +26,25 @@ export default tseslint.config(
           ],
         },
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "ThrowStatement > NewExpression[callee.name='Error']",
+          message: 'Throw an Error subclass (class FooError extends Error) so callers can tell failures apart.',
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'process',
+          property: 'env',
+          message: 'Read the environment only in src/config.ts and pass the parsed values down.',
+        },
+      ],
     },
+  },
+  {
+    files: ['src/config.ts'],
+    rules: { 'no-restricted-properties': 'off' },
   },
 );

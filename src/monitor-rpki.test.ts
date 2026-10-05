@@ -12,7 +12,7 @@ import type { Vrp } from './rpki.ts';
 
 const prefix = (text: string): Prefix => {
   const parsed = parsePrefix(text);
-  if (!parsed.ok) throw new Error(`bad test prefix ${text}: ${parsed.problem}`);
+  if (!parsed.ok) assert.fail(`bad test prefix ${text}: ${parsed.problem}`);
   return parsed.value;
 };
 
